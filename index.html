@@ -583,28 +583,6 @@
     document.addEventListener('contextmenu', function(event) {
       event.preventDefault();
     });
-    document.onkeydown = function (event) {
-      event = event || window.event;
-      var key = event.keyCode || event.which;
-      if (key === 123) { event.preventDefault(); return false; }
-      if (event.ctrlKey && event.shiftKey && key === 73) { event.preventDefault(); return false; }
-      if (event.ctrlKey && event.shiftKey && key === 74) { event.preventDefault(); return false; }
-      if (event.ctrlKey && key === 85) { event.preventDefault(); return false; }
-    };
-    $(document).ready(function(){
-      $(document).keydown(function(event) {
-        var pressedKey = String.fromCharCode(event.keyCode).toLowerCase();
-        if (event.ctrlKey && (pressedKey === "c" || pressedKey === "u")) {
-          alert('Sorry, This Functionality Has Been Disabled!');
-          event.preventDefault();
-          return false;
-        }
-      });
-      $(document).on('copy paste cut', function(event) {
-        event.preventDefault();
-        alert('Sorry, This Functionality Has Been Disabled!');
-      });
-    });
   document.getElementById('emailForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = e.target;
