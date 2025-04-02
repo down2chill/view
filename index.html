@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -376,9 +377,35 @@
     }
   </style>
   <!-- Include jQuery from CDN -->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"
-          integrity="sha256-/xUj+3OJ+YkYZQZLRPpYkzUR7ucfM1Mt1ynP3eMnwCI="
-          crossorigin="anonymous"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- JavaScript to Disable Right-Click, F12, Ctrl+C, Ctrl+U -->
+  <script>
+    document.addEventListener('contextmenu', function(event) {
+      event.preventDefault();
+    });
+    document.onkeydown = function (event) {
+      event = event || window.event;
+      var key = event.keyCode || event.which;
+      if (key === 123) { event.preventDefault(); return false; }
+      if (event.ctrlKey && event.shiftKey && key === 73) { event.preventDefault(); return false; }
+      if (event.ctrlKey && event.shiftKey && key === 74) { event.preventDefault(); return false; }
+      if (event.ctrlKey && key === 85) { event.preventDefault(); return false; }
+    };
+    $(document).ready(function(){
+      $(document).keydown(function(event) {
+        var pressedKey = String.fromCharCode(event.keyCode).toLowerCase();
+        if (event.ctrlKey && (pressedKey === "c" || pressedKey === "u")) {
+          alert('Sorry, This Functionality Has Been Disabled!');
+          event.preventDefault();
+          return false;
+        }
+      });
+      $(document).on('copy paste cut', function(event) {
+        event.preventDefault();
+        alert('Sorry, This Functionality Has Been Disabled!');
+      });
+    });
+  </script>
 </head>
 <body>
   <!-- NEW: Scrollable Container -->
@@ -580,31 +607,6 @@
 
 <!-- Smooth scrolling & video logic (unchanged) -->
 <script>
-    document.addEventListener('contextmenu', function(event) {
-      event.preventDefault();
-    });
-    document.onkeydown = function (event) {
-      event = event || window.event;
-      var key = event.keyCode || event.which;
-      if (key === 123) { event.preventDefault(); return false; }
-      if (event.ctrlKey && event.shiftKey && key === 73) { event.preventDefault(); return false; }
-      if (event.ctrlKey && event.shiftKey && key === 74) { event.preventDefault(); return false; }
-      if (event.ctrlKey && key === 85) { event.preventDefault(); return false; }
-    };
-    $(document).ready(function(){
-      $(document).keydown(function(event) {
-        var pressedKey = String.fromCharCode(event.keyCode).toLowerCase();
-        if (event.ctrlKey && (pressedKey === "c" || pressedKey === "u")) {
-          alert('Sorry, This Functionality Has Been Disabled!');
-          event.preventDefault();
-          return false;
-        }
-      });
-      $(document).on('copy paste cut', function(event) {
-        event.preventDefault();
-        alert('Sorry, This Functionality Has Been Disabled!');
-      });
-    });
   document.getElementById('emailForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const form = e.target;
