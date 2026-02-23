@@ -433,8 +433,9 @@
             <h1>Down2Chill</h1>
             <p class="additional-text">Always stay in the loop with your available friends in real time. Revolutionary approach shows you who's free and for what, specifically with YOU, and right now!</p>
             <p>Empowering Spontaneous Real-Life Connections<br/>With One Click</p>
-            <a href="https://down2chill.com/get" target="_blank" class="btn" style="display:inline-block;width:150px;text-align:center;margin-right:1rem;margin-bottom:1rem;">Join Now</a>
-			<a href="https://wefunder.com/down2chill" target="_blank" class="btn" style="display:inline-block;width:150px;text-align:center;margin-bottom:1rem;">Invest</a>
+            <a href="https://apps.apple.com/us/app/down2chill/id6444803295" target="_blank" class="btn" style="display:inline-block;width:150px;text-align:center;margin-right:1rem;margin-bottom:1rem;">iPhone</a>
+			<a href="https://play.google.com/store/apps/details?id=com.down2chill.v3&pcampaignid=web_share" target="_blank" class="btn" style="display:inline-block;width:150px;text-align:center;margin-bottom:1rem;">Android</a>
+			
 
           </div>
           <div class="hero-image">
@@ -695,6 +696,9 @@
   });
   document.querySelector('.hero-image video').addEventListener('contextmenu', function(e) {
     e.preventDefault();
+  });
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("year").textContent = new Date().getFullYear();
   });
 </script>
 </body>
