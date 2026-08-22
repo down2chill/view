@@ -456,6 +456,49 @@ body.lb-open{overflow:hidden}
 .banner svg.i{width:19px;height:19px;flex:none}
 .banner a{color:var(--primary);font-weight:600;text-decoration:underline}
 
+/* ---- toast ---- */
+.toast{position:fixed;z-index:80;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);max-width:min(420px,calc(100vw - 32px));
+  display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:999px;
+  background:#12143a;color:#fff;font-size:14.5px;font-weight:600;white-space:nowrap;
+  box-shadow:0 14px 34px -10px rgba(10,10,50,.55);animation:trise .2s ease-out}
+.toast[hidden]{display:none}
+@keyframes trise{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+.toast.err{background:#a4212a}
+.toast .spin{width:15px;height:15px;flex:none;border-radius:50%;border:2px solid rgba(255,255,255,.35);
+  border-top-color:#fff;animation:tspin .7s linear infinite}
+@keyframes tspin{to{transform:rotate(360deg)}}
+
+/* ---- get-the-app modal ---- */
+.modal{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:rgba(10,10,40,.55);-webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+  animation:mfade .18s ease-out}
+.modal[hidden]{display:none}
+@keyframes mfade{from{opacity:0}to{opacity:1}}
+@keyframes mrise{from{opacity:0;transform:translateY(14px) scale(.97)}to{opacity:1;transform:none}}
+.modal-card{position:relative;width:100%;max-width:390px;background:var(--card);border-radius:26px;
+  padding:34px 26px 26px;text-align:center;box-shadow:0 30px 70px -20px rgba(20,20,80,.5);
+  animation:mrise .24s cubic-bezier(.2,.8,.3,1)}
+.modal-x{position:absolute;top:14px;right:14px;display:grid;place-items:center;width:38px;height:38px;
+  border-radius:50%;color:var(--muted);transition:background .18s,color .18s}
+.modal-x:hover{background:#f2f1fb;color:var(--ink)}
+.modal-ic{width:74px;height:74px;margin:0 auto 18px;border-radius:22px;display:grid;place-items:center;
+  font-size:36px;line-height:1;background:linear-gradient(145deg,#ede9fe,#dbeafe);
+  box-shadow:0 10px 24px -10px rgba(74,52,234,.5)}
+.modal-card h3{margin:0 0 10px;font:700 clamp(21px,5.6vw,24px)/1.2 var(--disp);letter-spacing:-.02em}
+.modal-card p{margin:0 0 22px;font-size:15.5px;line-height:1.55;color:var(--ink-soft)}
+.modal-cta{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:56px;
+  border-radius:var(--r-md);background:linear-gradient(100deg,#5b3ff0,#4a34ea);color:#fff;
+  font-size:16.5px;font-weight:700;box-shadow:0 10px 22px -8px rgba(74,52,234,.6);
+  transition:filter .18s,transform .12s}
+.modal-cta:hover{filter:brightness(1.07)}
+.modal-cta:active{transform:scale(.99)}
+.modal-cta svg.i{width:20px;height:20px;stroke-width:2.2}
+.modal-later{display:block;width:100%;margin-top:6px;padding:14px;color:var(--muted);
+  font-size:15px;font-weight:600;border-radius:var(--r-sm);transition:background .18s,color .18s}
+.modal-later:hover{background:#f7f6fd;color:var(--ink-soft)}
+body.modal-open{overflow:hidden}
+
 /* ============ responsive ============ */
 @media (max-width:440px){
   .chat-card{flex-wrap:wrap}
@@ -576,6 +619,9 @@ body.lb-open{overflow:hidden}
 
 <main id="app"></main>
 <div id="chrome"></div>
+<input type="file" id="photo-input" accept="image/*" hidden>
+<div id="toast" class="toast" hidden></div>
+<div class="modal" id="app-modal" role="dialog" aria-modal="true" aria-labelledby="modal-h" hidden></div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden></div>
 <div class="menu" id="row-menu" role="menu" hidden>
   <button type="button" role="menuitem"><svg class="i"><use href="#check"/></svg>Change RSVP Status</button>
@@ -951,6 +997,19 @@ function ico(id,cls){ return '<svg class="i'+(cls?' '+cls:'')+'"><use href="#'+i
 function img(url,alt,cls){ return '<img'+(cls?' class="'+cls+'"':'')+' src="'+(url||'')+'" alt="'+
   h(alt||'')+'" loading="lazy" decoding="async">'; }
 function fname(n){ return String(n||'').split(' ')[0]; }
+var _toastT=null;
+function toast(msg,kind,ms){
+  var el=document.getElementById('toast'); if(!el) return;
+  clearTimeout(_toastT);
+  el.className='toast'+(kind==='err'?' err':'');
+  el.innerHTML=(kind==='wait'?'<span class="spin"></span>':'')+h(msg);
+  el.hidden=false;
+  if(ms!==0) _toastT=setTimeout(function(){ el.hidden=true; }, ms||2600);
+}
+function mapsUrl(ev){
+  return 'https://www.google.com/maps/search/?api=1&query='+
+    encodeURIComponent((ev.venue?ev.venue+', ':'')+ev.address);
+}
 function skel(msg){ return '<p class="skel">'+h(msg||'Loading\u2026')+'</p>'; }
 function statusPill(ev){
   if(ev.dateISO<TODAY) return '<span class="pill went">'+(ev.role==='hosting'?'Hosted':'Went')+'</span>';
@@ -1135,8 +1194,8 @@ function renderEvent(id){
   var total=c.going+c.maybe+c.cant;
 
   var photosBlock = ev.photos
-    ? '<div class="strip"><a class="add-photo" href="#">'+ico('cam-plus')+
-        '<b>Add Photo</b><small>Share memories from this event</small></a>'+
+    ? '<div class="strip"><button class="add-photo" type="button" data-addphoto="'+ev.id+'">'+
+        ico('cam-plus')+'<b>Add Photo</b><small>Share memories from this event</small></button>'+
         ev.photos.slice(0,8).map(function(p){ return img(p.thumbUrl,''); }).join('')+'</div>'+
       '<p class="strip-meta">'+ev.photoCount+' shared photos &nbsp;\u00B7&nbsp; Last added '+
         h(ev.lastPhotoLabel)+'</p>'
@@ -1209,7 +1268,8 @@ function renderEvent(id){
       '</section>'+
       '<section class="sec"><div class="sec-h"><h2>Photos</h2>'+
         '<a class="link" href="#photos/'+ev.id+'" data-nav>View all ('+ev.photoCount+')</a></div>'+
-        '<div class="btn-row"><a class="ghost" href="#">'+ico('cam-plus')+'Add Photo</a>'+
+        '<div class="btn-row"><button class="ghost" type="button" data-addphoto="'+ev.id+'">'+
+            ico('cam-plus')+'Add Photo</button>'+
           '<a class="ghost" href="#">'+ico('share')+'Share Album</a></div>'+
         photosBlock+
         '<a class="link-row" href="#photos/'+ev.id+'" data-nav>See everyone\u2019s photos '+ico('arr')+'</a>'+
@@ -1224,7 +1284,8 @@ function renderEvent(id){
           '<span class="pin">'+ico('pin-fill')+'</span>'+
           '<span class="map-label">'+h(ev.venue)+'</span></div>'+
           '<div class="map-foot"><div><b>'+h(ev.venue)+'</b><span>'+h(ev.address)+'</span></div>'+
-          '<a class="ghost" href="#">'+ico('nav')+'Open Directions</a></div></div>'+
+          '<a class="ghost" href="'+mapsUrl(ev)+'" target="_blank" rel="noopener">'+
+            ico('nav')+'Open Directions</a></div></div>'+
       '</section>'+
       '<section class="sec"><div class="details"><h3>Event details</h3>'+
         '<div class="drow2">'+ico('users')+'<span>Maximum capacity</span><b>'+h(ev.capacity)+'</b></div>'+
@@ -1322,7 +1383,8 @@ function renderPhotos(id){
     '<h1 class="title">Photos</h1>'+
     '<p class="pmeta">'+(ev.photos?ev.photos.length:ev.photoCount)+' photos from '+h(ev.title)+
       (ev.lastPhotoLabel?' \u00B7 Last added '+h(ev.lastPhotoLabel):'')+'</p>'+
-    '<div class="btn-row"><a class="ghost" href="#">'+ico('cam-plus')+'Add Photo</a>'+
+    '<div class="btn-row"><button class="ghost" type="button" data-addphoto="'+ev.id+'">'+
+        ico('cam-plus')+'Add Photo</button>'+
       '<a class="ghost" href="#">'+ico('share')+'Share Album</a></div>'+
     grid+'</div>';
 }
@@ -1389,12 +1451,26 @@ function renderDebug(){
   '</div>';
 }
 
+/* ================= get-the-app modal ================= */
+function getAppModal(){
+  return '<div class="modal-card">'+
+    '<button class="modal-x" type="button" data-modal-close aria-label="Close">'+ico('x')+'</button>'+
+    '<div class="modal-ic">\uD83D\uDDD3\uFE0F</div>'+
+    '<h3 id="modal-h">Events are made in the app</h3>'+
+    '<p>Creating and hosting events lives in the Down2Chill app. '+
+      'Grab it free, then plan your next one in a couple of taps.</p>'+
+    '<a class="modal-cta" href="https://down2chill.com/get" target="_blank" rel="noopener">'+
+      'Get the app'+ico('arr')+'</a>'+
+    '<button class="modal-later" type="button" data-modal-close>Maybe later</button>'+
+  '</div>';
+}
+
 /* ================= chrome (fixed bars) ================= */
 function bottomNav(active){
   return '<nav class="bnav" aria-label="Main">'+
     '<a class="bnav-i" href="#home" data-nav'+(active==='home'?' aria-current="page"':'')+'>'+
       ico('home')+'<span>Home</span></a>'+
-    '<a class="bnav-new" href="#debug" data-nav><span class="em">\uD83D\uDDD3\uFE0F</span>New Event</a>'+
+    '<button class="bnav-new" type="button" data-modal><span class="em">\uD83D\uDDD3\uFE0F</span>New Event</button>'+
     '<a class="bnav-i" href="#calendar" data-nav'+(active==='calendar'?' aria-current="page"':'')+'>'+
       ico('cal-p')+'<span>Calendar</span></a>'+
   '</nav>';
@@ -1412,6 +1488,7 @@ function eventDock(){
       chrome=document.getElementById('chrome'),
       menu=document.getElementById('row-menu'),
       lb=document.getElementById('lightbox'),
+      modal=document.getElementById('app-modal'),
       anchor=null, homeTab='upcoming', homeQ='', scrolls={}, curKey='', watching=null,
       lbEvent=null, lbIdx=0;
 
@@ -1432,16 +1509,23 @@ function eventDock(){
     /* Detail views stream their subcollections; attach on entry, drop on exit. */
     var wants = (r.v==='event'||r.v==='guests'||r.v==='photos') ? r.id : null;
     if(wants !== watching){
-      if(window.D2C && D2C.unwatchEvent) D2C.unwatchEvent();
-      watching = wants;
-      if(wants && window.D2C && D2C.watchEvent) D2C.watchEvent(wants);
+      if(window.D2C && D2C.watchEvent){
+        D2C.unwatchEvent();
+        watching = wants;
+        if(wants) D2C.watchEvent(wants);
+      } else {
+        /* The firebase module is a deferred <script type="module">, so on a
+           deep link it hasn't loaded yet. Leave `watching` unset so the next
+           render (the store's first notify) actually attaches the listeners. */
+        watching = null;
+      }
     }
 
     if(!STORE.ready){ app.innerHTML=loadingView(); chrome.innerHTML=''; return; }
     var curKeyChanged = curKey !== key;
     if(curKey && curKeyChanged) scrolls[curKey]=window.scrollY;
 
-    closeLb();
+    closeLb(); closeModal();
     if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
     else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(); }
@@ -1471,6 +1555,16 @@ function eventDock(){
   /* ---------- delegated events ---------- */
   document.addEventListener('click',function(e){
     var t=e.target;
+
+    var addp=t.closest('[data-addphoto]');
+    if(addp){
+      if(window.D2C && D2C.pickPhoto) D2C.pickPhoto(addp.dataset.addphoto);
+      else toast('Connect Firebase to add photos.','err');
+      return;
+    }
+
+    if(t.closest('[data-modal]')){ openModal(); return; }
+    if(t.closest('[data-modal-close]') || t===modal){ closeModal(); return; }
 
     var backEl=t.closest('[data-back]');
     if(backEl){ e.preventDefault(); back(backEl.dataset.back); return; }
@@ -1564,6 +1658,18 @@ function eventDock(){
     }
   });
 
+  /* ---------- get-the-app modal ---------- */
+  function openModal(){
+    modal.innerHTML=getAppModal(); modal.hidden=false;
+    document.body.classList.add('modal-open');
+    var c=modal.querySelector('.modal-cta'); if(c) c.focus();
+  }
+  function closeModal(){
+    if(modal.hidden) return;
+    modal.hidden=true; modal.innerHTML='';
+    document.body.classList.remove('modal-open');
+  }
+
   /* ---------- lightbox ---------- */
   function openLb(id,i){
     lbEvent=findEvent(id); if(!lbEvent || !lbEvent.photos) return;
@@ -1620,7 +1726,7 @@ function eventDock(){
     if(anchor){ anchor.setAttribute('aria-expanded','false'); anchor=null; }
   }
   document.addEventListener('keydown',function(e){
-    if(e.key==='Escape'){ closeMenu(); closeLb(); }
+    if(e.key==='Escape'){ closeMenu(); closeLb(); closeModal(); }
     if(lbEvent){
       if(e.key==='ArrowRight') stepLb(1);
       if(e.key==='ArrowLeft')  stepLb(-1);
@@ -1842,7 +1948,11 @@ async function seed(){
       const ph = ev.allPhotos[i];
       await put(doc(collection(evRef, "photos")), {
         eventUid: ev.fsId, path: "", url: IMG(ph.seed, 1400, 1400), thumbUrl: IMG(ph.seed, 600, 600),
-        byUid: PERSON[ph.byId].fsId, byName: pn(ph.byId), whenLabel: ph.when, order: i, source: "seed"
+        byUid: PERSON[ph.byId].fsId, byName: pn(ph.byId), byAvatarUrl: pav(ph.byId),
+        whenLabel: ph.when,
+        /* sort key is DESCENDING — highest is newest. Seeds count down from the
+           list length; uploads use Date.now(), which always outranks them.   */
+        order: ev.allPhotos.length - i, source: "seed"
       });
     }
     for(let i = 0; i < ev.activity.length; i++){
@@ -1867,45 +1977,76 @@ async function seed(){
 }
 
 /* ---------------- 2. upload ---------------- */
-async function upload(){
+/* Shared by the debug panel and the in-app "Add Photo" buttons. */
+async function uploadPhoto(evId, file, say){
+  say = say || dim;
   const { db, storage, fs, st } = await initFirebase();
-  const input  = document.getElementById("fb-file");
-  const sel    = document.getElementById("fb-ev");
-  const local  = SEED_BY_ID[sel.selectedOptions[0].dataset.local];
-  const evId   = local && local.fsId ? local.fsId : sel.value;
-  if(!local || !local.fsId)
-    throw new Error("Run step 1 first — the event has no Firestore id yet in this session.");
-  const file   = input.files && input.files[0];
+  if(!evId) throw new Error("No event id — run step 1 first.");
   if(!file) throw new Error("Choose an image file first.");
+  if(!/^image\//.test(file.type)) throw new Error("That file isn\u2019t an image.");
   if(file.size > 25 * 1024 * 1024)
-    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB — the rules cap uploads at 25 MB.");
+    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB \u2014 the limit is 25 MB.");
 
   const safe = file.name.replace(/[^\w.\-]+/g, "_");
   const path = PHOTO_ROOT + "/" + evId + "/photos/" + Date.now() + "_" + safe;
-  dim("uploading " + (file.size / 1024).toFixed(0) + " KB to " + path);
+  say("uploading " + (file.size / 1024).toFixed(0) + " KB to " + path);
 
   const ref  = st.ref(storage, path);
-  const snap = await st.uploadBytes(ref, file, { contentType: file.type });
-  ok("uploaded to Storage (" + snap.metadata.size + " bytes)");
+  await st.uploadBytes(ref, file, { contentType: file.type });
+  const url  = await st.getDownloadURL(ref);
 
-  const url = await st.getDownloadURL(ref);
-  ok("download URL resolved");
-  dim(url);
-
+  const me = PERSON["emily"];
   const photoRef = fs.doc(fs.collection(db, ...FS_ROOT, "events", evId, "photos"));
   await fs.setDoc(photoRef, {
-    path, url, thumbUrl: url,
-    eventUid: evId, byUid: PERSON["emily"].fsId, byName: PERSON["emily"].name,
+    path, url, thumbUrl: url, eventUid: evId,
+    byUid: me.fsId || "", byName: me.name, byAvatarUrl: AV(me.avatar),
     whenLabel: "Just now",
-    order: 999, source: "upload", uploadedAt: fs.serverTimestamp()
+    order: Date.now(), source: "upload", uploadedAt: fs.serverTimestamp()
   });
-  ok("Firestore photo doc created: " + FS_ROOT.join("/") + "/events/" + evId + "/photos/" + photoRef.id);
-
   await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", evId), { photoCount: fs.increment(1) });
+  return { url, path, id: photoRef.id };
+}
+
+/* debug-panel version: reads the <select> + <input type=file> */
+async function upload(){
+  const input = document.getElementById("fb-file");
+  const sel   = document.getElementById("fb-ev");
+  const local = SEED_BY_ID[sel.selectedOptions[0].dataset.local];
+  const evId  = local && local.fsId ? local.fsId : sel.value;
+  if(!local || !local.fsId)
+    throw new Error("Run step 1 first \u2014 the event has no Firestore id yet in this session.");
+
+  const r = await uploadPhoto(evId, input.files && input.files[0]);
+  ok("uploaded to Storage");
+  ok("download URL resolved");
+  dim(r.url);
+  ok("Firestore photo doc created: " + FS_ROOT.join("/") + "/events/" + evId + "/photos/" + r.id);
   ok("photoCount incremented on " + FS_ROOT.join("/") + "/events/" + evId);
 
   const wrap = document.getElementById("fb-prevwrap");
-  if(wrap) wrap.innerHTML = '<img class="fb-prev" src="' + url + '" alt="Uploaded preview">';
+  if(wrap) wrap.innerHTML = '<img class="fb-prev" src="' + r.url + '" alt="Uploaded preview">';
+}
+
+/* in-app version: opens the OS file picker for a given event */
+function pickPhoto(eventId){
+  if(STORE.mode !== "live"){
+    toast("Connect Firebase to add photos.", "err");
+    return;
+  }
+  const input = document.getElementById("photo-input");
+  input.value = "";
+  input.onchange = async () => {
+    const file = input.files && input.files[0];
+    if(!file) return;
+    toast("Uploading photo\u2026", "wait", 0);
+    try {
+      await uploadPhoto(eventId, file, () => {});
+      toast("Photo added");          // the live listener repaints the grid itself
+    } catch(e){
+      toast(e.message || "Upload failed", "err");
+    }
+  };
+  input.click();
 }
 
 /* ---------------- 3. read tests ---------------- */
@@ -2026,7 +2167,7 @@ async function watchDetail(id){
     });
   }, e => err("guests: " + e.code)));
 
-  unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "photos"), fs.orderBy("order")),
+  unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "photos"), fs.orderBy("order", "desc")),
     snap => STORE.setDetail(id, { photos: snap.docs.map(d => {
       const p = d.data();
       return { url: p.url, thumbUrl: p.thumbUrl || p.url, byName: p.byName || "Someone",
@@ -2060,6 +2201,7 @@ function mapGuest(g){
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
 
 window.D2C = {
+  pickPhoto,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
