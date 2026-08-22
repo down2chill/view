@@ -1655,14 +1655,19 @@ function eventDock(){
      -> Add app -> Web  ->  copy apiKey + appId from that config.
    ===================================================================== */
 const FB_CONFIG = {
-                                    // <-- paste yours
+  apiKey:            "__FIREBASE_API_KEY__",               // substituted at build time
   authDomain:        "down2chill-cc664.firebaseapp.com",
   projectId:         "down2chill-cc664",
-  storageBucket:     "down2chill-cc664.appspot.com",       // verify in Storage console
+  storageBucket:     "down2chill-cc664.appspot.com",
   messagingSenderId: "202068437157",
-  apiKey: "__FIREBASE_API_KEY__",
-  appId:  "__FIREBASE_APP_ID__",
+  appId:             "__FIREBASE_APP_ID__"                 // substituted at build time
 };
+
+/* A placeholder is a non-empty string, so a plain truthiness test would treat
+   an unsubstituted build as configured. These check for real values.        */
+const KEY_OK = !!FB_CONFIG.apiKey && !FB_CONFIG.apiKey.startsWith("__");
+const APP_OK = /:web:/.test(FB_CONFIG.appId || "");
+const UNSUBBED = (v) => (v || "").startsWith("__");
 
 const SDK = "https://www.gstatic.com/firebasejs/12.3.0/";
 /* Namespacing — this bucket/database already hold other data, so everything
@@ -1693,7 +1698,9 @@ function dim(m){ log(m, "dim"); }
 /* ---------------- init ---------------- */
 async function initFirebase(){
   if(fb) return fb;
-  if(!FB_CONFIG.apiKey) throw new Error("apiKey is blank — set FB_CONFIG.apiKey in this file.");
+  if(!KEY_OK) throw new Error(UNSUBBED(FB_CONFIG.apiKey)
+    ? "apiKey is still the build placeholder — Cloudflare did not substitute it."
+    : "apiKey is blank — set FB_CONFIG.apiKey.");
 
   const [{ initializeApp }, fs, st, au] = await Promise.all([
     import(SDK + "firebase-app.js"),
@@ -1729,9 +1736,13 @@ function renderConn(){
   const rows = [
     ["projectId", FB_CONFIG.projectId, !!FB_CONFIG.projectId],
     ["bucket",    FB_CONFIG.storageBucket, !!FB_CONFIG.storageBucket],
-    ["apiKey",    FB_CONFIG.apiKey ? "set" : "MISSING — edit FB_CONFIG", !!FB_CONFIG.apiKey],
-    ["appId",     FB_CONFIG.appId  ? (/:web:/.test(FB_CONFIG.appId) ? "web app \u2713" : "NOT a web appId")
-                                   : "MISSING — create a Web app", /:web:/.test(FB_CONFIG.appId)],
+    ["apiKey",    KEY_OK ? "set \u2713"
+                  : UNSUBBED(FB_CONFIG.apiKey) ? "PLACEHOLDER — build did not substitute"
+                  : "MISSING", KEY_OK],
+    ["appId",     APP_OK ? "web app \u2713"
+                  : UNSUBBED(FB_CONFIG.appId) ? "PLACEHOLDER — build did not substitute"
+                  : FB_CONFIG.appId ? "NOT a web appId (must contain :web:)"
+                  : "MISSING", APP_OK],
     ["origin",    location.protocol === "file:" ? "file:// — serve over http instead" : location.origin,
                   location.protocol !== "file:"],
     ["firestore",  FS_ROOT.join("/") + "/events", true],
@@ -1974,7 +1985,12 @@ async function testReads(){
 let unsubEvents = null, unsubDetail = [], watchingId = null;
 
 async function connectLive(){
-  if(!FB_CONFIG.apiKey){ useLocalData("Firebase not configured — showing bundled sample data."); return; }
+  if(!KEY_OK){
+    useLocalData(UNSUBBED(FB_CONFIG.apiKey)
+      ? "Build placeholder not substituted — showing bundled sample data."
+      : "Firebase not configured — showing bundled sample data.");
+    return;
+  }
   try {
     const { db, fs } = await initFirebase();
     // Every event document, ordered by date, streamed continuously.
@@ -2072,9 +2088,7 @@ new MutationObserver(() => { if(document.getElementById("fb-conn")) renderConn()
   .observe(document.getElementById("app"), { childList: true });
 if(document.getElementById("fb-conn")) renderConn();
 
-// Start streaming (or fall back to bundled data if apiKey is blank).
-connectLive();
-
+// Start streaming (or fall back to bundled data if the key is missing).
 connectLive();
 </script>
 </body>
