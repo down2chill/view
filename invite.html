@@ -456,6 +456,40 @@ body.lb-open{overflow:hidden}
 .banner svg.i{width:19px;height:19px;flex:none}
 .banner a{color:var(--primary);font-weight:600;text-decoration:underline}
 
+/* ---- chat page ---- */
+.chat-wrap{padding-bottom:calc(104px + env(safe-area-inset-bottom))}
+.chat-sub{margin:-12px 0 20px;color:var(--muted);font-size:15px}
+.thread{display:flex;flex-direction:column;gap:16px}
+.msg{display:flex;gap:11px;align-items:flex-end;max-width:82%}
+.msg img{width:34px;height:34px;border-radius:50%;object-fit:cover;flex:none;background:var(--soft)}
+.msg .bub{min-width:0;background:var(--card);border:1px solid var(--line);border-radius:20px 20px 20px 6px;
+  padding:11px 15px;box-shadow:0 1px 2px rgba(20,20,80,.04)}
+.msg .who2{display:block;font-size:12.5px;font-weight:700;color:var(--primary-ink);margin-bottom:3px}
+.msg .bub p{margin:0;font-size:15.5px;line-height:1.45;color:var(--ink);overflow-wrap:anywhere}
+.msg time{display:block;margin-top:5px;font-size:11.5px;color:var(--muted-2)}
+.msg.me{margin-left:auto;flex-direction:row-reverse}
+.msg.me .bub{background:linear-gradient(180deg,#4a41f5,#3830e2);border-color:transparent;
+  border-radius:20px 20px 6px 20px;box-shadow:0 6px 16px -6px rgba(58,50,226,.5)}
+.msg.me .bub p,.msg.me time{color:#fff}
+.msg.me time{opacity:.75;text-align:right}
+.chat-empty{text-align:center;color:var(--muted);padding:50px 20px;font-size:15.5px}
+.composer{position:fixed;z-index:25;left:0;right:0;bottom:0;
+  padding:12px max(var(--pad),env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));
+  background:rgba(247,247,251,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border-top:1px solid var(--line)}
+.composer-in{max-width:720px;margin:0 auto;display:flex;gap:10px;align-items:center}
+.composer input{flex:1;min-width:0;height:52px;padding:0 18px;border:1px solid var(--line-2);
+  border-radius:26px;background:#fff;font:inherit;font-size:16px;color:var(--ink);outline:0;
+  transition:border-color .18s}
+.composer input:focus{border-color:#b9b3f0}
+.composer button{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;
+  background:linear-gradient(140deg,#5b3ff0,#4a34ea);color:#fff;
+  box-shadow:0 8px 18px -6px rgba(74,52,234,.55);transition:filter .18s,transform .12s}
+.composer button:hover{filter:brightness(1.07)}
+.composer button:active{transform:scale(.95)}
+.composer button[disabled]{opacity:.45;box-shadow:none;filter:grayscale(.5);cursor:not-allowed}
+.composer svg.i{width:22px;height:22px;stroke-width:2}
+
 /* ---- toast ---- */
 .toast{position:fixed;z-index:80;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));
   transform:translateX(-50%);max-width:min(420px,calc(100vw - 32px));
@@ -831,6 +865,17 @@ function hydrate(ev){
   if(!ev.chat){
     ev.chat={fromId:ev.hostId,msg:'Everything\u2019s set for '+dp.dow+'.',time:'1 day ago',unread:0};
   }
+  /* Chat lives on the event as an array; this is the seeded thread. */
+  if(!ev.thread){
+    var canned=['Who\u2019s bringing what?','I can grab ice on the way.',
+                'What time should we get there?','Just parked \u2014 heading in.'];
+    ev.thread=[];
+    for(var t=0;t<3;t++){
+      ev.thread.push({ from: ev.guests[(t+1)%ev.guests.length].id,
+                       text: canned[(t+seedN)%canned.length], minsAgo: 240-t*70 });
+    }
+    ev.thread.push({ from: ev.chat.fromId, text: ev.chat.msg, minsAgo: 2 });
+  }
   if(!ev.activity){
     ev.activity=[
       {id:ev.guests[1]?ev.guests[1].id:ev.hostId, ic:'check', ok:1, txt:'is Going', t:'2 hours ago'},
@@ -900,6 +945,26 @@ var STORE = {
 
 function findEvent(key){ return STORE.byId[key] || null; }
 
+/* ---------- time ---------- */
+function ago(isoTs){
+  var t = Date.parse(isoTs);
+  if(isNaN(t)) return "";
+  var m = Math.round((Date.now() - t) / 60000);
+  if(m < 1)    return "Just now";
+  if(m < 60)   return m + " min ago";
+  var hh = Math.round(m / 60);
+  if(hh < 24)  return hh + (hh === 1 ? " hour ago" : " hours ago");
+  var dd = Math.round(hh / 24);
+  if(dd === 1) return "Yesterday";
+  if(dd < 7)   return dd + " days ago";
+  return new Date(t).toLocaleDateString();
+}
+function msgFrom(m){
+  return { fromUid: m.fromUid || "", fromName: m.fromName || "Someone",
+           fromAvatarUrl: m.fromAvatarUrl || "", text: m.text || "",
+           at: m.at || "", isYou: !!m.isYou };
+}
+
 /* ---------- mapping ---------- */
 function chipsFor(ev){
   return [
@@ -927,7 +992,11 @@ function docToModel(id, d){
     counts: { going: c.going||0, maybe: c.maybe||0, cant: c.cant||0, pending: c.pending||0 },
     guestPreview: d.guestPreview || [],
     photoCount: d.photoCount || 0, lastPhotoLabel: d.lastPhotoLabel || "",
-    guests: null, waiting: null, photos: null, activity: null, chat: null
+    /* messages ride along on the event document, so they are realtime for
+       free and need no extra listener. */
+    messages: (d.chatMessages || []).map(msgFrom),
+    chatUnread: d.chatUnread || 0,
+    guests: null, waiting: null, photos: null, activity: null
   };
 }
 
@@ -945,7 +1014,12 @@ function seedToModel(ev){
     guestPreview: ev.guests.slice(0, 5).map(function(g){
       return { name: pn(g.id), avatarUrl: pav(g.id), isHost: !!g.host }; }),
     photoCount: ev.photoCount, lastPhotoLabel: ev.photoWhen,
-    guests: null, waiting: null, photos: null, activity: null, chat: null,
+    messages: ev.thread.map(function(m){
+      return { fromUid: m.from, fromName: pn(m.from), fromAvatarUrl: pav(m.from),
+               text: m.text, at: new Date(Date.now() - m.minsAgo*60000).toISOString(),
+               isYou: m.from === "emily" }; }),
+    chatUnread: ev.chat.unread || 0,
+    guests: null, waiting: null, photos: null, activity: null,
     _seed: ev
   };
 }
@@ -965,10 +1039,18 @@ function seedDetail(ev){
                byName: pn(p.byId), byAvatarUrl: pav(p.byId), whenLabel: p.when }; }),
     activity: s.activity.map(function(a){
       return { personName: pn(a.id), personAvatarUrl: pav(a.id), icon: a.ic,
-               isCheck: !!a.ok, text: a.txt, whenLabel: a.t, quote: !!a.quote }; }),
-    chat: { fromName: pn(s.chat.fromId), fromAvatarUrl: pav(s.chat.fromId),
-            text: s.chat.msg, whenLabel: s.chat.time, unread: s.chat.unread || 0 }
+               isCheck: !!a.ok, text: a.txt, whenLabel: a.t, quote: !!a.quote }; })
   };
+}
+
+/* Append locally (offline mode); live mode goes through D2C.sendMessage. */
+function appendLocalMessage(id, text){
+  var ev = STORE.byId[id]; if(!ev) return;
+  ev.messages = (ev.messages || []).concat([{
+    fromUid: "emily", fromName: pn("emily"), fromAvatarUrl: pav("emily"),
+    text: text, at: new Date().toISOString(), isYou: true
+  }]);
+  STORE.notify();
 }
 
 function useLocalData(reason){
@@ -1006,6 +1088,7 @@ function toast(msg,kind,ms){
   el.hidden=false;
   if(ms!==0) _toastT=setTimeout(function(){ el.hidden=true; }, ms||2600);
 }
+function absUrl(hash){ return location.origin + location.pathname + '#' + hash; }
 function mapsUrl(ev){
   return 'https://www.google.com/maps/search/?api=1&query='+
     encodeURIComponent((ev.venue?ev.venue+', ':'')+ev.address);
@@ -1201,13 +1284,15 @@ function renderEvent(id){
         h(ev.lastPhotoLabel)+'</p>'
     : skel('Loading photos\u2026');
 
-  var chatBlock = ev.chat
-    ? '<div class="chat-card"><div class="av-wrap">'+img(ev.chat.fromAvatarUrl,'')+
-        (ev.chat.unread?'<span class="badge">'+ev.chat.unread+'</span>':'')+'</div>'+
-        '<div class="chat-txt"><b>'+h(fname(ev.chat.fromName))+'</b><p>'+h(ev.chat.text)+
-        '</p><small>'+h(ev.chat.whenLabel)+'</small></div>'+
-        '<a class="ghost" href="#">'+ico('chat')+'Open Chat</a></div>'
-    : skel('Loading chat\u2026');
+  var last = (ev.messages||[])[ (ev.messages||[]).length-1 ];
+  var chatBlock = last
+    ? '<div class="chat-card"><div class="av-wrap">'+img(last.fromAvatarUrl,'')+
+        (ev.chatUnread?'<span class="badge">'+ev.chatUnread+'</span>':'')+'</div>'+
+        '<div class="chat-txt"><b>'+h(fname(last.fromName))+'</b><p>'+h(last.text)+
+        '</p><small>'+h(ago(last.at))+'</small></div>'+
+        '<a class="ghost" href="#chat/'+ev.id+'" data-nav>'+ico('chat')+'Open Chat</a></div>'
+    : '<div class="chat-card"><div class="chat-txt"><p>No messages yet.</p></div>'+
+      '<a class="ghost" href="#chat/'+ev.id+'" data-nav>'+ico('chat')+'Start chat</a></div>';
 
   var feedBlock = ev.activity
     ? '<ul class="feed">'+ev.activity.map(function(a){
@@ -1221,7 +1306,8 @@ function renderEvent(id){
     '<header class="top">'+
       '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">'+ico('back')+'</a>'+
       '<div class="sp"></div>'+
-      '<button class="icon-btn" type="button" aria-label="Share event">'+ico('share')+'</button>'+
+      '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
+        '" aria-label="Share event">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
     '</header>'+
     '<h1 class="title">'+h(ev.title)+'</h1>'+
@@ -1270,7 +1356,8 @@ function renderEvent(id){
         '<a class="link" href="#photos/'+ev.id+'" data-nav>View all ('+ev.photoCount+')</a></div>'+
         '<div class="btn-row"><button class="ghost" type="button" data-addphoto="'+ev.id+'">'+
             ico('cam-plus')+'Add Photo</button>'+
-          '<a class="ghost" href="#">'+ico('share')+'Share Album</a></div>'+
+          '<button class="ghost" type="button" data-share-kind="album" data-share-id="'+ev.id+'">'+
+            ico('share')+'Share Album</button></div>'+
         photosBlock+
         '<a class="link-row" href="#photos/'+ev.id+'" data-nav>See everyone\u2019s photos '+ico('arr')+'</a>'+
       '</section>'+
@@ -1335,7 +1422,8 @@ function renderGuests(id){
       '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
         ico('back')+'</a>'+
       '<div class="sp"></div>'+
-      '<button class="icon-btn" type="button" aria-label="Share guest list">'+ico('share')+'</button>'+
+      '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
+        '" aria-label="Share event">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
     '</header>'+
     '<h1 class="title">Guests</h1>'+
@@ -1354,7 +1442,8 @@ function renderGuests(id){
     '<button class="seg" type="button">Can\u2019t Go ('+c.cant+')'+ico('chev')+'</button>'+
     '<section class="slink"><div class="slink-top"><div><h2>Share Event Link</h2>'+
       '<p>Anyone with the link can request an invitation.</p></div>'+
-      '<button class="ghost" type="button">'+ico('link')+'Copy Link</button></div>'+
+      '<button class="ghost" type="button" data-share-kind="event" data-share-id="'+ev.id+'">'+
+        ico('link')+'Copy Link</button></div>'+
       '<button class="regen" type="button">'+ico('refresh')+'Regenerate Link</button></section>'+
   '</div>';
 }
@@ -1377,7 +1466,8 @@ function renderPhotos(id){
       '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
         ico('back')+'</a>'+
       '<div class="sp"></div>'+
-      '<button class="icon-btn" type="button" aria-label="Share album">'+ico('share')+'</button>'+
+      '<button class="icon-btn" type="button" data-share-kind="album" data-share-id="'+ev.id+
+        '" aria-label="Share album">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
     '</header>'+
     '<h1 class="title">Photos</h1>'+
@@ -1385,7 +1475,8 @@ function renderPhotos(id){
       (ev.lastPhotoLabel?' \u00B7 Last added '+h(ev.lastPhotoLabel):'')+'</p>'+
     '<div class="btn-row"><button class="ghost" type="button" data-addphoto="'+ev.id+'">'+
         ico('cam-plus')+'Add Photo</button>'+
-      '<a class="ghost" href="#">'+ico('share')+'Share Album</a></div>'+
+      '<button class="ghost" type="button" data-share-kind="album" data-share-id="'+ev.id+'">'+
+        ico('share')+'Share Album</button></div>'+
     grid+'</div>';
 }
 
@@ -1402,6 +1493,40 @@ function lightbox(ev,i){
     '</div>'+
     '<div class="lb-cap">'+img(ph.byAvatarUrl,'')+'<b>'+h(fname(ph.byName))+'</b><span>'+
       h(ph.whenLabel)+'</span></div>';
+}
+
+/* ================= CHAT ================= */
+function renderChat(id){
+  var ev=findEvent(id); if(!ev) return renderHome();
+  var msgs=ev.messages||[];
+  var body = msgs.length
+    ? '<div class="thread">'+msgs.map(function(m){
+        return '<div class="msg'+(m.isYou?' me':'')+'">'+
+          (m.isYou?'':img(m.fromAvatarUrl,''))+
+          '<div class="bub">'+(m.isYou?'':'<span class="who2">'+h(fname(m.fromName))+'</span>')+
+            '<p>'+h(m.text)+'</p><time>'+h(ago(m.at))+'</time></div>'+
+        '</div>'; }).join('')+'</div>'
+    : '<p class="chat-empty">No messages yet. Say hello \uD83D\uDC4B</p>';
+
+  return '<div class="wrap chat-wrap">'+
+    '<header class="top">'+
+      '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
+        ico('back')+'</a>'+
+      '<div class="sp"></div>'+
+      '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
+        '" aria-label="Share event">'+ico('share')+'</button>'+
+    '</header>'+
+    '<h1 class="title">Chat</h1>'+
+    '<p class="chat-sub">'+h(ev.title)+' \u00B7 '+msgs.length+' message'+(msgs.length===1?'':'s')+'</p>'+
+    body+
+  '</div>';
+}
+function composer(id){
+  return '<div class="composer"><div class="composer-in">'+
+    '<input type="text" id="msg-in" placeholder="Message the group\u2026" aria-label="Write a message" '+
+      'autocomplete="off" data-event="'+id+'">'+
+    '<button type="button" id="msg-send" data-event="'+id+'" aria-label="Send">'+ico('nav')+'</button>'+
+  '</div></div>';
 }
 
 /* ================= FIREBASE DEBUG (scratch page) ================= */
@@ -1475,11 +1600,13 @@ function bottomNav(active){
       ico('cal-p')+'<span>Calendar</span></a>'+
   '</nav>';
 }
-function eventDock(){
+function eventDock(id){
   return '<nav class="dock" aria-label="Event actions">'+
     '<a href="#">'+ico('user-plus')+'<span>Invite Friends</span></a>'+
-    '<div class="gap"><a class="fab" href="#">'+ico('chat')+'<b>Event Chat</b></a></div>'+
-    '<a href="#">'+ico('net')+'<span>Share Event</span></a></nav>';
+    '<div class="gap"><a class="fab" href="#chat/'+id+'" data-nav>'+ico('chat')+
+      '<b>Event Chat</b></a></div>'+
+    '<button type="button" data-share-kind="event" data-share-id="'+id+'">'+
+      ico('net')+'<span>Share Event</span></button></nav>';
 }
 </script>
 <script>
@@ -1497,6 +1624,7 @@ function eventDock(){
     if(parts[0]==='event')  return {v:'event',  id:parts[1]};
     if(parts[0]==='guests') return {v:'guests', id:parts[1]};
     if(parts[0]==='photos') return {v:'photos', id:parts[1]};
+    if(parts[0]==='chat')   return {v:'chat',   id:parts[1]};
     if(parts[0]==='calendar') return {v:'calendar'};
     if(parts[0]==='debug') return {v:'debug'};
     return {v:'home'};
@@ -1507,7 +1635,7 @@ function eventDock(){
     var r=route(), key=location.hash||'#home';
 
     /* Detail views stream their subcollections; attach on entry, drop on exit. */
-    var wants = (r.v==='event'||r.v==='guests'||r.v==='photos') ? r.id : null;
+    var wants = (r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat') ? r.id : null;
     if(wants !== watching){
       if(window.D2C && D2C.watchEvent){
         D2C.unwatchEvent();
@@ -1528,16 +1656,19 @@ function eventDock(){
     closeLb(); closeModal();
     if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
-    else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(); }
+    else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(r.id); }
+    else if(r.v==='chat'){     app.innerHTML=renderChat(r.id);  chrome.innerHTML=composer(r.id);
+                               scrollThread(); }
     else if(r.v==='photos'){   app.innerHTML=renderPhotos(r.id);chrome.innerHTML=''; }
     else if(r.v==='debug'){    app.innerHTML=renderDebug();     chrome.innerHTML=bottomNav(''); }
     else {                     app.innerHTML=renderGuests(r.id);chrome.innerHTML=''; }
 
     document.body.className = (r.v==='event') ? 'has-dock'
-                            : (r.v==='guests'||r.v==='photos') ? '' : 'has-nav';
+                            : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
 
     curKey=key;
     var restore = curKeyChanged ? (scrolls[key]!=null ? scrolls[key] : 0) : window.scrollY;
+    if(r.v==='chat') return;   // chat manages its own scroll (pinned to newest)
     if(curKeyChanged) window.scrollTo(0, (r.v==='guests'||r.v==='photos') ? 0 : restore);
   }
 
@@ -1555,6 +1686,12 @@ function eventDock(){
   /* ---------- delegated events ---------- */
   document.addEventListener('click',function(e){
     var t=e.target;
+
+    var sh=t.closest('[data-share-kind]');
+    if(sh){ doShare(sh.dataset.shareKind, sh.dataset.shareId); return; }
+
+    var send=t.closest('#msg-send');
+    if(send){ sendMsg(send.dataset.event); return; }
 
     var addp=t.closest('[data-addphoto]');
     if(addp){
@@ -1647,6 +1784,10 @@ function eventDock(){
     if(el) el.innerHTML=calBody();
   }
 
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter' && e.target.id==='msg-in'){ e.preventDefault(); sendMsg(e.target.dataset.event); }
+  });
+
   document.addEventListener('input',function(e){
     if(e.target.id==='q-home'){
       homeQ=e.target.value;
@@ -1657,6 +1798,47 @@ function eventDock(){
       paintCal();
     }
   });
+
+  /* ---------- share ---------- */
+  function doShare(kind, id){
+    var ev=findEvent(id); if(!ev) return;
+    var url   = absUrl((kind==='album'?'photos/':'event/')+ev.id),
+        title = kind==='album' ? 'Photos from '+ev.title : ev.title,
+        text  = kind==='album' ? 'Photos from '+ev.title+' on Down2Chill'
+                               : 'Join me at '+ev.title+' on Down2Chill';
+    if(navigator.share){
+      navigator.share({title:title, text:text, url:url}).catch(function(e){
+        if(e && e.name==='AbortError') return;      // user dismissed the sheet
+        copyLink(url);
+      });
+      return;
+    }
+    copyLink(url);
+  }
+  function copyLink(url){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url)
+        .then(function(){ toast('Link copied'); })
+        .catch(function(){ toast(url,'err',5000); });
+    } else toast(url,'err',5000);
+  }
+
+  /* ---------- chat ---------- */
+  function scrollThread(){
+    requestAnimationFrame(function(){ window.scrollTo(0, document.body.scrollHeight); });
+  }
+  function sendMsg(id){
+    var input=document.getElementById('msg-in');
+    if(!input) return;
+    var text=input.value.trim(); if(!text) return;
+    input.value='';
+    if(STORE.mode==='live' && window.D2C && D2C.sendMessage){
+      D2C.sendMessage(id, text).catch(function(e){ toast(e.message||'Could not send','err'); });
+    } else {
+      appendLocalMessage(id, text);
+    }
+    scrollThread();
+  }
 
   /* ---------- get-the-app modal ---------- */
   function openModal(){
@@ -1878,6 +2060,14 @@ function eventDoc(ev, fsId, hostFsId){
       uid: PERSON[g.id].fsId, name: pn(g.id), avatarUrl: pav(g.id), isHost: !!g.host
     })),
     photoCount: ev.photoCount, lastPhotoLabel: ev.photoWhen,
+    /* Chat is an array on the event document — realtime via the event
+       listener, no extra subcollection or listener needed. */
+    chatMessages: ev.thread.map(m => ({
+      fromUid: PERSON[m.from].fsId || "", fromName: pn(m.from), fromAvatarUrl: pav(m.from),
+      text: m.text, at: new Date(Date.now() - m.minsAgo * 60000).toISOString(),
+      isYou: m.from === "emily"
+    })),
+    chatUnread: ev.chat.unread || 0,
     seededAt: new Date().toISOString()
   };
 }
@@ -1939,7 +2129,7 @@ async function seed(){
 
     /* photos / activity / messages have no natural key, so they get pure
        auto-ids. Clear the previously seeded ones first — uploads are kept. */
-    for(const sub of ["photos", "activity", "messages"]){
+    for(const sub of ["photos", "activity", "messages"]){   // "messages" clears the old subcollection
       const existing = await getDocs(query(collection(evRef, sub), where("source", "==", "seed")));
       for(const d of existing.docs) await drop(d.ref);
     }
@@ -1962,10 +2152,6 @@ async function seed(){
         icon: a.ic, isCheck: !!a.ok, text: a.txt, whenLabel: a.t, order: i, source: "seed"
       });
     }
-    await put(doc(collection(evRef, "messages")), {
-      eventUid: ev.fsId, fromUid: PERSON[ev.chat.fromId].fsId, fromName: pn(ev.chat.fromId),
-      text: ev.chat.msg, whenLabel: ev.chat.time, unread: ev.chat.unread || 0, source: "seed"
-    });
   }
 
   await flush(true);
@@ -2181,15 +2367,6 @@ async function watchDetail(id){
                icon: a.icon || "check", isCheck: !!a.isCheck, text: a.text || "",
                whenLabel: a.whenLabel || "", quote: /^[\u201C"]/.test(a.text || "") };
     })}), e => err("activity: " + e.code)));
-
-  unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "messages"), fs.limit(1)),
-    snap => {
-      const m = snap.empty ? null : snap.docs[0].data();
-      STORE.setDetail(id, { chat: m
-        ? { fromName: m.fromName || "Someone", fromAvatarUrl: m.fromAvatarUrl || "",
-            text: m.text || "", whenLabel: m.whenLabel || "", unread: m.unread || 0 }
-        : { fromName: "", fromAvatarUrl: "", text: "No messages yet.", whenLabel: "", unread: 0 } });
-    }, e => err("messages: " + e.code)));
 }
 
 function mapGuest(g){
@@ -2200,8 +2377,19 @@ function mapGuest(g){
 
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
 
+async function sendMessage(eventId, text){
+  const { db, fs } = await initFirebase();
+  const me = PERSON["emily"];
+  await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", eventId), {
+    chatMessages: fs.arrayUnion({
+      fromUid: me.fsId || "", fromName: me.name, fromAvatarUrl: AV(me.avatar),
+      text: text, at: new Date().toISOString(), isYou: true
+    })
+  });
+}
+
 window.D2C = {
-  pickPhoto,
+  pickPhoto, sendMessage,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
