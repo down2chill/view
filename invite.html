@@ -831,6 +831,12 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .stack2 img{object-fit:cover}
 .stack2 span{display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--primary)}
 
+.inp.vf{text-align:center;font:700 24px/1 var(--disp);letter-spacing:10px;margin-bottom:16px}
+.modal-cta.pick{margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px}
+.tagn{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  background:rgba(255,255,255,.22);padding:3px 8px;border-radius:8px}
+.modal-ic svg.i{width:32px;height:32px}
+.onote.center{text-align:center;margin-top:14px}
 .round-btn.mini{width:42px;height:42px;flex:none}
 .fin-av{position:relative;width:96px;height:96px;margin:0 auto 16px}
 .fin-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--soft)}
@@ -1369,7 +1375,7 @@ var STORE = {
    profile into Firestore under visitors/{uid}.
    ========================================================= */
 var ME_KEY = 'd2c.me.v1', REG_KEY = 'd2c.visitors.v1', ME = null;
-var repaintMe = function(){};
+var repaintMe = function(){}, promptVerify = function(){};
 
 function newUid(){
   var a = new Uint8Array(8), i, s = '';
@@ -1382,7 +1388,7 @@ function loadMe(){
   if(ME) return ME;
   try{ ME = JSON.parse(localStorage.getItem(ME_KEY) || 'null'); }catch(e){}
   if(!ME || !ME.uid){
-    ME = { uid: newUid(), name: '', phone: '', photo: '', events: [], claims: {}, rsvp: {}, linked: [], cloudLinked: [] };
+    ME = { uid: newUid(), name: '', phone: '', photo: '', verifiedPhone: '', events: [], claims: {}, rsvp: {}, linked: [], cloudLinked: [] };
     try{ localStorage.setItem(ME_KEY, JSON.stringify(ME)); }catch(e){}
   }
   if(!Array.isArray(ME.events)) ME.events = [];
@@ -1390,6 +1396,7 @@ function loadMe(){
   if(!Array.isArray(ME.cloudLinked)) ME.cloudLinked = [];
   if(!ME.claims || typeof ME.claims !== 'object') ME.claims = {};
   if(!ME.rsvp || typeof ME.rsvp !== 'object') ME.rsvp = {};
+  if(typeof ME.verifiedPhone !== 'string') ME.verifiedPhone = '';
   return ME;
 }
 function meAvatar(){ var m = loadMe(); return m.photo || AV('me-' + m.uid); }
@@ -1397,9 +1404,8 @@ function normPhone(p){ return String(p || '').replace(/\D/g, '').slice(-10); }
 function regAll(){
   try{ return JSON.parse(localStorage.getItem(REG_KEY) || '{}') || {}; }catch(e){ return {}; }
 }
-/* other uids that share my phone number \u2014 the local registry plus, in live
-   mode, whatever the visitors collection matched */
-function linkedProfiles(){
+/* every OTHER uid that carries my phone number, verified or not */
+function phoneMatches(){
   var m = loadMe(), mine = normPhone(m.phone);
   if(!mine) return [];
   var reg = regAll(), out = [], k;
@@ -1408,6 +1414,26 @@ function linkedProfiles(){
     if(p.uid !== m.uid && !out.some(function(o){ return o.uid === p.uid; })) out.push(p);
   });
   return out;
+}
+/* a duplicate number only links accounts after the 2FA-style confirmation */
+function phoneVerified(){
+  var m = loadMe(), p = normPhone(m.phone);
+  return !!p && m.verifiedPhone === p;
+}
+function linkedProfiles(){ return phoneVerified() ? phoneMatches() : []; }
+/* one name across every linked account */
+function commonizeName(name){
+  var m = loadMe(), reg = regAll();
+  m.name = name;
+  phoneMatches().forEach(function(p){ p.name = name; if(reg[p.uid]) reg[p.uid].name = name; });
+  try{ localStorage.setItem(REG_KEY, JSON.stringify(reg)); }catch(e){}
+}
+/* linking changes who "hosting" means \u2014 recompute every event's role */
+function remapRoles(){
+  var uids = myUids();
+  STORE.events.forEach(function(e){
+    if(e.hostUid) e.role = uids.indexOf(e.hostUid) > -1 ? 'hosting' : 'invited';
+  });
 }
 /* every event any of my linked uids opened or was invited to */
 function myEvents(){
@@ -1446,15 +1472,19 @@ function saveMe(){
       .then(function(){ return normPhone(m.phone) ? D2C.findByPhone(normPhone(m.phone)) : []; })
       .then(function(list){
         m.cloudLinked = (list || []).filter(function(p){ return p.uid !== m.uid; });
-        m.cloudLinked.forEach(function(p){
-          (p.events || []).forEach(function(id){ if(m.events.indexOf(id) < 0) m.events.push(id); });
-          var k;
-          for(k in (p.rsvp || {}))   if(!m.rsvp[k])   m.rsvp[k]   = p.rsvp[k];
-          for(k in (p.claims || {})) if(!m.claims[k]) m.claims[k] = p.claims[k];
-        });
+        if(phoneVerified()){
+          m.cloudLinked.forEach(function(p){
+            (p.events || []).forEach(function(id){ if(m.events.indexOf(id) < 0) m.events.push(id); });
+            var k;
+            for(k in (p.rsvp || {}))   if(!m.rsvp[k])   m.rsvp[k]   = p.rsvp[k];
+            for(k in (p.claims || {})) if(!m.claims[k]) m.claims[k] = p.claims[k];
+          });
+          remapRoles(); STORE.notify();
+        }
         m.linked = linkedProfiles().map(function(p){ return p.uid; });
         try{ localStorage.setItem(ME_KEY, JSON.stringify(m)); }catch(e){}
-        repaintMe();
+        if(m.cloudLinked.length && !phoneVerified()) promptVerify();
+        else repaintMe();
       })
       .catch(function(e){ console.warn('profile sync failed', e); });
   }
@@ -1636,7 +1666,7 @@ function inMyList(ev){
   var ids = myEvents();
   return ids.indexOf(ev.id) > -1 || (ev.slug && ids.indexOf(ev.slug) > -1);
 }
-function mineOnly(list){ return shown(list.filter(inMyList)); }
+function mineOnly(list){ remapRoles(); return shown(list.filter(inMyList)); }
 
 function eventsOn(iso, q){
   return mineOnly(STORE.events.filter(function(e){ return e.dateISO === iso && matches(e, q); }));
@@ -3354,6 +3384,33 @@ function finishCard(){
     '<button class="modal-later" type="button" data-modal-close>Skip for now</button>' +
   '</div>';
 }
+function verifyCard(){
+  var m = loadMe(), k = phoneMatches().length;
+  return '<div class="modal-card claim">' +
+    '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
+    '<div class="modal-ic">' + ico('lock') + '</div>' +
+    '<h3 id="modal-h">Verify your number</h3>' +
+    '<p><b>' + h(m.phone) + '</b> is already on ' + k + ' other account' + (k === 1 ? '' : 's') + '. ' +
+      'To link them into one, confirm the number is yours with the code we texted you.</p>' +
+    '<input class="inp vf" id="vf-code" type="text" inputmode="numeric" maxlength="6" ' +
+      'autocomplete="one-time-code" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022">' +
+    '<button class="modal-cta" type="button" data-verify>Verify & Link</button>' +
+    '<button class="modal-later" type="button" data-modal-close>Not now</button>' +
+    '<p class="onote center">Demo build \u2014 no text is actually sent, any 6 digits work.</p>' +
+  '</div>';
+}
+function chooseNameCard(names){
+  return '<div class="modal-card claim">' +
+    '<div class="modal-ic">' + ico('person') + '</div>' +
+    '<h3 id="modal-h">One name for your accounts</h3>' +
+    '<p>Your linked accounts use different names. Pick the one everyone should see \u2014 it applies to all of them.</p>' +
+    names.map(function(nm, i){
+      return '<button class="modal-cta pick" type="button" data-pickname="' + h(nm) + '">' +
+        h(nm) + (i === 0 ? '<span class="tagn">new</span>' : '<span class="tagn">existing</span>') +
+      '</button>';
+    }).join('') +
+  '</div>';
+}
 function renderProfile(){
   var m = loadMe(), linked = linkedProfiles(), evs = myEvents().length;
   return '<div class="wrap narrow">' +
@@ -3383,7 +3440,8 @@ function renderProfile(){
       '<div class="srow noact"><span class="sic">' + ico('cal-p') + '</span><b>Events opened</b>' +
         '<span class="sval">' + evs + '</span></div>' +
       '<div class="srow noact"><span class="sic">' + ico('phone') + '</span><b>Linked accounts</b>' +
-        '<span class="sval">' + (linked.length || 'None yet') + '</span></div>' +
+        '<span class="sval">' + (linked.length ||
+          (phoneMatches().length ? 'Verify to link ' + phoneMatches().length : 'None yet')) + '</span></div>' +
     '</div></section>' +
     (linked.length ?
       '<section class="sec"><div class="sec-h"><h2>Linked accounts</h2></div>' +
@@ -3649,7 +3707,10 @@ function eventDock(id){
     }
 
     if(t.closest('[data-mephoto]')){ pickMePhoto(); return; }
-    if(t.closest('[data-mesave]')){ saveMe(); propagateMe(); toast('Profile saved'); repaintProfile(); return; }
+    if(t.closest('[data-mesave]')){
+      saveMe(); propagateMe(); toast('Profile saved'); repaintProfile();
+      checkPhoneLink(); return;
+    }
     var clm=t.closest('[data-claim]');
     if(clm){ doClaim(clm.dataset.claim, false); return; }
     if(t.closest('[data-claim-go]')){
@@ -3670,7 +3731,26 @@ function eventDock(id){
       var fp=document.getElementById('fin-phone');
       var mf=loadMe(); if(fp) mf.phone=fp.value;
       saveMe(); propagateMe(); closeModal();
-      toast('Profile updated'); return;
+      toast('Profile updated');
+      checkPhoneLink(); return;
+    }
+    if(t.closest('[data-verify]')){
+      var vc=document.getElementById('vf-code'), vv=vc&&vc.value.trim();
+      if(!/^\d{6}$/.test(vv)){ toast('Enter the 6-digit code','err'); return; }
+      var mv=loadMe(); mv.verifiedPhone=normPhone(mv.phone);
+      saveMe(); closeModal();
+      finishLink(); return;
+    }
+    var pkn=t.closest('[data-pickname]');
+    if(pkn){
+      var nm=pkn.dataset.pickname;
+      commonizeName(nm); saveMe(); propagateMe();
+      if(STORE.mode==='live' && window.D2C && D2C.renameLinked)
+        D2C.renameLinked(loadMe().cloudLinked||[], nm).catch(function(){});
+      closeModal();
+      remapRoles(); STORE.notify();
+      toast('Accounts linked as '+fname(nm));
+      repaintProfile(); return;
     }
     var gsec=t.closest('[data-gsec]');
     if(gsec){
@@ -3926,15 +4006,46 @@ function eventDock(id){
     app.innerHTML=renderProfile(); chrome.innerHTML=bottomNav('profile');
   }
   repaintMe = repaintProfile;
+  promptVerify = function(){
+    if(!modal.hidden) return;
+    modal.innerHTML=verifyCard(); modal.hidden=false;
+    document.body.classList.add('modal-open');
+  };
+  /* a saved duplicate number needs the 2FA-style confirmation before linking */
+  function checkPhoneLink(){
+    var m=loadMe();
+    if(!normPhone(m.phone) || !phoneMatches().length) return;
+    if(phoneVerified()){ finishLink(); return; }
+    promptVerify();
+  }
+  /* verified: union the views, then settle on one name */
+  function finishLink(){
+    var m=loadMe();
+    remapRoles(); STORE.notify();
+    var seen={}, distinct=[];
+    [m.name].concat(linkedProfiles().map(function(p){ return p.name; }))
+      .filter(Boolean).forEach(function(nm){
+        var k=nm.toLowerCase();
+        if(!seen[k]){ seen[k]=1; distinct.push(nm); }
+      });
+    if(distinct.length>1){
+      modal.innerHTML=chooseNameCard(distinct); modal.hidden=false;
+      document.body.classList.add('modal-open');
+    } else {
+      if(distinct.length===1) commonizeName(distinct[0]);
+      saveMe(); toast('Accounts linked'); repaintProfile();
+    }
+  }
   /* a profile edit shows up everywhere this uid already appears */
   function propagateMe(){
     var m=loadMe(), av=meAvatar(), uids=myUids();
     STORE.events.forEach(function(ev){
       if(uids.indexOf(ev.hostUid)>-1){ ev.hostName=m.name||ev.hostName; ev.hostAvatarUrl=av; }
       (ev.guestPreview||[]).forEach(function(g){
-        if(g.uid===m.uid){ g.name=m.name||g.name; g.avatarUrl=av; } });
+        if(g.uid===m.uid || uids.indexOf(g.uid)>-1){ g.name=m.name||g.name; if(g.uid===m.uid) g.avatarUrl=av; } });
       (ev.messages||[]).forEach(function(msg){
-        if(msg.fromUid===m.uid){ msg.fromName=m.name||msg.fromName; msg.fromAvatarUrl=av; } });
+        if(msg.fromUid===m.uid || uids.indexOf(msg.fromUid)>-1){
+          msg.fromName=m.name||msg.fromName; if(msg.fromUid===m.uid) msg.fromAvatarUrl=av; } });
     });
     if(STORE.mode==='live' && window.D2C && D2C.propagateProfile){
       D2C.propagateProfile({ uid:m.uid, name:m.name, avatarUrl:av, rsvp:m.rsvp })
@@ -4832,6 +4943,21 @@ async function deleteEvent(id){
   ok("event deleted: " + FS_ROOT.join("/") + "/events/" + id);
 }
 
+/* ---------------- one name across linked accounts ---------------- */
+async function renameLinked(profiles, name){
+  const { db, fs } = await initFirebase();
+  for(const p of profiles){
+    await fs.setDoc(fs.doc(db, ...FS_ROOT, "visitors", p.uid), { name }, { merge: true });
+    const evs = await fs.getDocs(fs.query(
+      fs.collection(db, ...FS_ROOT, "events"), fs.where("hostUid", "==", p.uid)));
+    await Promise.all(evs.docs.map(d => fs.updateDoc(d.ref, { hostName: name })));
+    await Promise.all(Object.keys(p.rsvp || {}).map(id =>
+      fs.setDoc(fs.doc(db, ...FS_ROOT, "events", id, "guests", p.uid),
+        { name }, { merge: true }).catch(() => {})));
+  }
+  ok("name commonized across " + profiles.length + " linked account(s)");
+}
+
 /* ---------------- a named viewer joins the waiting list ---------------- */
 async function announceGuest(eventId){
   const { db, fs } = await initFirebase();
@@ -4972,7 +5098,7 @@ async function sendMessage(eventId, text){
 
 window.D2C = {
   pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
-  saveProfile, findByPhone, setRsvp, propagateProfile, announceGuest,
+  saveProfile, findByPhone, setRsvp, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
