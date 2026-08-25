@@ -859,8 +859,8 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
   box-shadow:0 0 0 1.5px var(--primary),0 2px 10px rgba(30,30,100,.08)}
 .mg-lab{margin:16px 2px 8px;font:700 12px/1 var(--disp);letter-spacing:.08em;
   text-transform:uppercase;color:var(--muted);text-align:left}
-.mg-avs{display:flex;gap:16px;justify-content:center;margin:2px 0 8px}
-.mg-av{position:relative;width:76px;height:76px;border-radius:50%;padding:0;
+.mg-avs{display:flex;flex-wrap:wrap;gap:16px;justify-content:center;margin:2px 0 8px}
+.mg-av{position:relative;flex:0 0 76px;width:76px;height:76px;aspect-ratio:1;border-radius:50%;padding:0;
   border:3px solid var(--line-2);transition:border-color .15s,transform .15s}
 .mg-av:hover{transform:scale(1.04)}
 .mg-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;background:var(--soft)}
@@ -3417,7 +3417,7 @@ function claimCard(ev){
         '<b>' + h(g.name) + '</b>' + (g.phone ? '<span>' + h(g.phone) + '</span>' : '') +
       '</button>';
     }).join('');
-  return '<div class="modal-card claim">' +
+  return '<div class="modal-card claim" data-claimfor="' + h(ev.id) + '">' +
     '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
     '<div class="modal-ic">\uD83D\uDC4B</div>' +
     '<h3 id="modal-h">Who are you?</h3>' +
@@ -3640,6 +3640,18 @@ function eventDock(id){
     document.body.className = (r.v==='event') ? 'has-dock'
                             : (r.v==='create'||r.v==='edit') ? 'has-cbar'
                             : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
+    var cSheet=modal.querySelector('[data-claimfor]');
+    if(cSheet && r.v==='event' && cSheet.dataset.claimfor===r.id){
+      var cInp=document.getElementById('claim-name'),
+          cVal=cInp?cInp.value:'', cFoc=document.activeElement===cInp,
+          cAt=cInp?cInp.selectionStart:0, cEv=findEvent(r.id);
+      if(cEv){
+        modal.innerHTML=claimCard(cEv);
+        var cInp2=document.getElementById('claim-name');
+        if(cInp2){ cInp2.value=cVal;
+          if(cFoc){ cInp2.focus(); try{ cInp2.setSelectionRange(cAt,cAt); }catch(e){} } }
+      }
+    }
     if(r.v==='event') maybeClaim(r.id);
 
     curKey=key;
