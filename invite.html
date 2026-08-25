@@ -125,6 +125,13 @@ svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .pill.went{background:#eef0f5;color:#6b7091}
 .empty{text-align:center;color:var(--muted);padding:46px 20px;font-size:15.5px}
 
+.ecard.draftc{border:1.5px dashed #c9c2f4;background:#fbfaff;cursor:pointer;box-shadow:none}
+.ecard.draftc:hover{transform:none;box-shadow:0 6px 18px -8px rgba(60,50,160,.18)}
+.dthumb{display:grid;place-items:center;color:#b7b3d9}
+.dthumb svg.i{width:34px;height:34px;stroke-width:1.4}
+.pill.draft{background:#fef3c7;color:#b45309}
+.emore.ddel{color:#c0414f}
+
 /* ============ bottom nav ============ */
 .bnav{position:fixed;z-index:25;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));
   bottom:calc(14px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;
@@ -846,7 +853,8 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .gdel:hover{border-color:#e3909b;color:#c0414f}
 .gdel svg.i{width:17px;height:17px;stroke-width:2.2}
 /* selection summary lives in the step footer */
-.fsel{flex:1;min-width:0;display:flex;align-items:center;gap:12px}
+.cbar-in>span.fsel{flex:1 1 0;min-width:0;display:flex;align-items:center;gap:10px}
+@media (max-width:520px){ .fsel .stack2 img:nth-child(n+3),.fsel .stack2 span{display:none} }
 .ftx{min-width:0}
 .ftx b{display:block;font-size:clamp(13.5px,3.7vw,15px);font-weight:700;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1827,13 +1835,38 @@ function dataBanner(){
     ' <a href="#debug" data-nav>Open debug</a></span></div>';
 }
 
+function draftCard(d){
+  var dp=dparts(d.date);
+  return '<div class="ecard draftc" data-draft="'+h(d.draftId)+'" role="button" tabindex="0">'+
+    (d.coverUrl ? img(d.coverUrl,'','thumb')
+                : '<span class="thumb dthumb">'+ico('pen')+'</span>')+
+    '<button class="emore ddel" type="button" data-draftdel="'+h(d.draftId)+'" aria-label="Delete draft">'+
+      ico('trash')+'</button>'+
+    '<div class="ebody"><div class="etop"><div class="einfo">'+
+      '<h3>'+h(d.title||'Untitled event')+'</h3>'+
+      (d.venue?'<div class="eloc">'+ico('pin')+'<span>'+h(d.venue)+'</span></div>':'')+
+      '<div class="ewhen"><span>'+dp.dowShort+', '+dp.monShort+' '+dp.day+' \u00B7 '+h(d.time)+'</span></div>'+
+    '</div>'+
+    '<div class="edate"><b>'+dp.day+'</b><span>'+dp.monUp+'</span></div></div>'+
+    '<div class="ehost"><p>Not sent to anyone yet \u2014 tap to keep editing</p>'+
+      '<span class="pill draft">Draft</span></div>'+
+  '</div></div>';
+}
 function homeList(tab,q){
   var list = (tab==='hosting'?hosting() : tab==='past'?past() : upcoming())
               .filter(function(e){ return matches(e,q); });
   var hid = hiddenCount(),
       foot = hid ? '<p class="hid-note">'+hid+(hid===1?' event hidden':' events hidden')+
                    ' \u00B7 <button type="button" data-unhide>Show all</button></p>' : '';
+  var dr='';
+  if(tab==='hosting'){
+    var ds=eventDrafts().filter(function(x){
+      return !q || (x.title||'').toLowerCase().indexOf(q.trim().toLowerCase())>-1; });
+    if(ds.length) dr='<h3 class="mon-h">Drafts</h3><div class="ecards">'+
+      ds.map(draftCard).join('')+'</div>';
+  }
   if(!list.length){
+    if(dr) return dr + foot;
     return (q ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
               : '<p class="empty">Nothing here yet. Open an event link someone sent you and it\u2019ll appear on this page.</p>') + foot;
   }
@@ -1843,7 +1876,7 @@ function homeList(tab,q){
     else body+=eventCard(row.ev);
   });
   if(open) body+='</div>';
-  return body + foot;
+  return dr + body + foot;
 }
 
 function renderHome(tab,q,open){
@@ -2365,11 +2398,38 @@ function timePlus(t, mins){
   return TIME_OPTS[Math.round(((m + mins) % 1440) / 15)];
 }
 /* ---------- draft state ---------- */
-var DRAFT_KEY = 'd2c.draft.v2', DRAFT = null;
+var DRAFT_KEY = 'd2c.draft.v2', DRAFTS_KEY = 'd2c.eventdrafts.v1', DRAFT = null;
+
+/* ---- saved drafts: parked events, visible under Hosting, sent to no one ---- */
+function eventDrafts(){
+  try{ return JSON.parse(localStorage.getItem(DRAFTS_KEY) || '[]') || []; }catch(e){ return []; }
+}
+function writeEventDrafts(list){
+  try{ localStorage.setItem(DRAFTS_KEY, JSON.stringify(list)); }catch(e){}
+}
+function saveEventDraft(){
+  var d = loadDraft(), list = eventDrafts(), snap = {}, k, i;
+  if(!d.draftId) d.draftId = 'dft-' + Date.now().toString(36);
+  for(k in d) if(k.charAt(0) !== '_') snap[k] = d[k];
+  for(i = 0; i < list.length; i++) if(list[i].draftId === d.draftId) break;
+  list[i] = snap;
+  writeEventDrafts(list);
+  return d.draftId;
+}
+function deleteEventDraft(id){
+  writeEventDrafts(eventDrafts().filter(function(x){ return x.draftId !== id; }));
+}
+function resumeEventDraft(id){
+  var snap = eventDrafts().filter(function(x){ return x.draftId === id; })[0];
+  if(!snap) return false;
+  try{ localStorage.setItem(DRAFT_KEY, JSON.stringify(snap)); }catch(e){}
+  DRAFT = null; loadDraft();
+  return true;
+}
 
 function blankDraft(){
   var tomorrow = addDays(TODAY, 1);
-  return { title:'', coverUrl:'', coverPath:'',
+  return { draftId:'', title:'', coverUrl:'', coverPath:'',
            date:tomorrow, time:'7:00 PM', endTime:null,
            venue:'', address:'', about:'', vibes:[], vibeMore:false,
            /* step 3 */
@@ -3173,7 +3233,7 @@ function inviteBody(){
           ? 'Pick from your phone\u2019s address book, or import a saved contacts file.'
           : 'This browser has no contact picker \u2014 in your Contacts app choose Share \u2192 vCard, then import the file here.') +
       '</span>' +
-      '<button class="alt" type="button" data-vcf>Import a contacts file (.vcf)</button>' +
+      '<button class="alt" type="button" data-vcf>Import a contacts file (.vcf) \u2014 adds everyone at once</button>' +
       '</span>' +
       (contactsReady() ? '<button type="button" data-contacts>Allow</button>' : '') +
     '</div></section>') +
@@ -3823,7 +3883,23 @@ function eventDock(id){
       if(st>1) swapHash(st===2?'#create':'#create/'+(st-1)); else back('home');
       return;
     }
-    if(t.closest('[data-savedraft]')){ saveDraft(); toast('Draft saved'); return; }
+    if(t.closest('[data-savedraft]')){
+      saveEventDraft(); clearDraft();
+      toast('Draft saved \u2014 it\u2019s waiting under Hosting');
+      homeTab='hosting';
+      history.replaceState({d:0},'','#home');
+      render(); return;
+    }
+    var ddel=t.closest('[data-draftdel]');
+    if(ddel){
+      deleteEventDraft(ddel.dataset.draftdel);
+      toast('Draft deleted'); render(); return;
+    }
+    var dres=t.closest('[data-draft]');
+    if(dres){
+      if(resumeEventDraft(dres.dataset.draft)) go('#create');
+      return;
+    }
     if(t.closest('[data-cnext]')){
       var er=draftErrors(loadDraft());
       if(er){ toast(er[0],'err'); var bad=document.getElementById(er[1]); if(bad) bad.focus(); return; }
@@ -4480,6 +4556,7 @@ function eventDock(id){
     btn.disabled=true;
     btn.innerHTML='<span class="spin"></span>Creating\u2026';
     function done(id){
+      if(d.draftId) deleteEventDraft(d.draftId);
       clearDraft(); toast('Event created');
       /* depth 0 so the event page's Back behaves like any other event's: home */
       history.replaceState({d:0},'','#event/'+id);
