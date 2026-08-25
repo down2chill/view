@@ -24,7 +24,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans
   -webkit-font-smoothing:antialiased}
 /* the one and only scroller: a fixed full-viewport pane, so it tracks the
    exact same viewport the fixed bars anchor to */
-#app{position:fixed;inset:0;overflow-y:auto;overflow-x:hidden;
+#shell{position:fixed;inset:0;overflow:hidden;transform:translateZ(0)}
+#app{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scroll-behavior:smooth}
 img{display:block;max-width:100%}
 button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
@@ -1107,6 +1108,7 @@ button.view-all{display:block;width:100%;text-align:center}
 <symbol id="v-ticket" viewBox="20.99 24.79 35.58 24.05" fill="currentColor" stroke="none"><path d="M29.1709 31.0545H48.3824V42.5813H29.1709V31.0545ZM53.1853 36.8179C53.1853 38.4094 54.4754 39.6996 56.067 39.6996V45.4631C56.067 47.0546 54.7768 48.3448 53.1853 48.3448H24.368C22.7765 48.3448 21.4863 47.0546 21.4863 45.4631V39.6996C23.0779 39.6996 24.368 38.4094 24.368 36.8179C24.368 35.2263 23.0779 33.9362 21.4863 33.9362V28.1727C21.4863 26.5812 22.7765 25.291 24.368 25.291H53.1853C54.7768 25.291 56.067 26.5812 56.067 28.1727V33.9362C54.4754 33.9362 53.1853 35.2263 53.1853 36.8179ZM50.3035 30.5742C50.3035 29.7784 49.6584 29.1333 48.8627 29.1333H28.6906C27.8949 29.1333 27.2498 29.7784 27.2498 30.5742V43.0616C27.2498 43.8574 27.8949 44.5025 28.6906 44.5025H48.8627C49.6584 44.5025 50.3035 43.8574 50.3035 43.0616V30.5742Z"/></symbol>
 </defs></svg>
 
+<div id="shell">
 <main id="app"></main>
 <div id="chrome"></div>
 <input type="file" id="photo-input" accept="image/*" hidden>
@@ -1116,6 +1118,7 @@ button.view-all{display:block;width:100%;text-align:center}
 <div class="modal" id="app-modal" role="dialog" aria-modal="true" aria-labelledby="modal-h" hidden></div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden></div>
 <div class="menu" id="row-menu" role="menu" hidden></div>
+</div>
 <script>
 /* =====================================================================
    DATA TABLE — every screen reads from here. Add a row, it shows up in
