@@ -1512,11 +1512,9 @@ function docToModel(id, d){
     reminders: d.reminders || [], reminderLabel: d.reminderLabel || "",
     notifyChanges: d.notifyChanges !== false,
     dot: d.dot || "#6d28d9",
-    /* hosting is in the eye of the viewer: a visitor-created event is yours
-       only when its hostUid is one of your linked uids. Seed docs carry a
-       person id, not a visitor uid, so their authored role stands. */
-    role: (d.hostUid && myUids().indexOf(d.hostUid) > -1) ? "hosting"
-        : (d.role === "hosting" && !/^u-/.test(d.hostUid || "")) ? "hosting" : "invited",
+    /* hosting is in the eye of the viewer: an event is yours only when its
+       hostUid is one of your linked uids */
+    role: (d.hostUid && myUids().indexOf(d.hostUid) > -1) ? "hosting" : "invited",
     coverUrl: d.coverUrl || "", thumbUrl: d.thumbUrl || d.coverUrl || "", mapUrl: d.mapUrl || "",
     hostUid: d.hostUid || "", hostName: d.hostName || "Host", hostAvatarUrl: d.hostAvatarUrl || "",
     counts: { going: c.going||0, maybe: c.maybe||0, cant: c.cant||0, pending: c.pending||0 },
@@ -1537,7 +1535,7 @@ function seedToModel(ev){
     title: ev.title, dateISO: ev.date, time: ev.time, timeSort: t24(ev.time),
     venue: ev.venue, address: ev.address, about: ev.about,
     vibe: ev.vibe, capacity: ev.capacity, entry: ev.entry, inviteType: ev.invite,
-    dot: ev.dot, role: ev.role,
+    dot: ev.dot, role: 'invited',
     coverUrl: IMG(ev.img, 1000, 1250), thumbUrl: IMG(ev.img, 400, 440), mapUrl: IMG(ev.map, 1200, 675),
     hostName: pn(ev.hostId), hostAvatarUrl: pav(ev.hostId),
     counts: { going: ev.going, maybe: ev.maybe, cant: ev.cant, pending: ev.pending },
@@ -1578,7 +1576,7 @@ function appendLocalMessage(id, text){
   var ev = STORE.byId[id]; if(!ev) return;
   var m = loadMe();
   ev.messages = (ev.messages || []).concat([{
-    fromUid: m.uid, fromName: m.name || "You", fromAvatarUrl: meAvatar(),
+    fromUid: m.uid, fromName: m.name || "Guest", fromAvatarUrl: meAvatar(),
     text: text, at: new Date().toISOString(), isYou: true
   }]);
   STORE.notify();
@@ -1620,13 +1618,23 @@ function hiddenCount(){
 }
 function shown(list){ return list.filter(function(e){ return !isHidden(e); }); }
 
-function eventsOn(iso, q){
-  return shown(STORE.events.filter(function(e){ return e.dateISO === iso && matches(e, q); }));
+/* An event is on your page only if you host it or one of your linked uids
+   opened it by direct link (any RSVP counts — a "can't go" stays visible so
+   you can change your mind). Everything else stays invisible. */
+function inMyList(ev){
+  if(ev.role === 'hosting') return true;
+  var ids = myEvents();
+  return ids.indexOf(ev.id) > -1 || (ev.slug && ids.indexOf(ev.slug) > -1);
 }
-function upcoming(){ return shown(STORE.events.filter(function(e){ return e.dateISO >= TODAY; })); }
-function past(){ return shown(STORE.events.filter(function(e){ return e.dateISO < TODAY; }))
+function mineOnly(list){ return shown(list.filter(inMyList)); }
+
+function eventsOn(iso, q){
+  return mineOnly(STORE.events.filter(function(e){ return e.dateISO === iso && matches(e, q); }));
+}
+function upcoming(){ return mineOnly(STORE.events.filter(function(e){ return e.dateISO >= TODAY; })); }
+function past(){ return mineOnly(STORE.events.filter(function(e){ return e.dateISO < TODAY; }))
   .slice().reverse(); }
-function hosting(){ return shown(STORE.events.filter(function(e){ return e.role === "hosting"; })); }
+function hosting(){ return mineOnly(STORE.events.filter(function(e){ return e.role === "hosting"; })); }
 </script>
 <script>
 /* ================= tiny helpers ================= */
@@ -1712,7 +1720,7 @@ function homeList(tab,q){
                    ' \u00B7 <button type="button" data-unhide>Show all</button></p>' : '';
   if(!list.length){
     return (q ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
-              : '<p class="empty">Nothing here yet.</p>') + foot;
+              : '<p class="empty">Nothing here yet. Open an event link someone sent you and it\u2019ll appear on this page.</p>') + foot;
   }
   var body='',open=false;
   groupByMonth(list).forEach(function(row){
@@ -3177,7 +3185,7 @@ function dropCover(d){
 /* The shape below is exactly what the events collection already stores, so a
    created event renders through the same code path as a seeded one. */
 function draftBase(d, id, hostUid){
-  var m0 = loadMe(), me = { name: m0.name || 'You', av: meAvatar() },
+  var m0 = loadMe(), me = { name: m0.name || 'Guest', av: meAvatar() },
       title = d.title.trim(),
       when = d.endTime ? (d.time + ' \u2013 ' + d.endTime) : d.time;
   return {
@@ -3208,7 +3216,7 @@ function draftDoc(d, id, hostUid){
 /* Offline fallback — the same document, kept in memory only. */
 function createLocalEvent(d){
   var id = 'draft-' + Date.now().toString(36),
-      me = { name: loadMe().name || 'You', av: meAvatar() },
+      me = { name: loadMe().name || 'Guest', av: meAvatar() },
       ev = docToModel(id, draftDoc(d, id, loadMe().uid));
   ev.guests = [{ name: me.name, avatarUrl: me.av, message: '',
                  invitedLabel: 'Just now', isHost: true, isYou: true, status: 'going' }];
@@ -3250,6 +3258,18 @@ function claimCard(ev){
     '<div class="addbox">' +
       '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
       '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
+    '</div>' +
+  '</div>';
+}
+function nameCard(){
+  return '<div class="modal-card claim">' +
+    '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
+    '<div class="modal-ic">\uD83D\uDC4B</div>' +
+    '<h3 id="modal-h">What\u2019s your name?</h3>' +
+    '<p>Your guests will see who\u2019s inviting them.</p>' +
+    '<div class="addbox">' +
+      '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
+      '<button class="addbtn" type="button" data-name-go>' + ico('arr') + 'Continue</button>' +
     '</div>' +
   '</div>';
 }
@@ -3474,7 +3494,15 @@ function eventDock(id){
     if(t.closest('[data-confirm-yes]')){ var v=confirmFn; closeModal(); if(v) v(); return; }
     if(t.closest('[data-modal-close]') || t===modal){ closeModal(); return; }
     var inv=t.closest('[data-cinvite]');
-    if(inv){ saveEvent(inv); return; }
+    if(inv){
+      if(!loadMe().name){
+        pendingName=function(){ var b=document.querySelector('[data-cinvite]'); if(b) saveEvent(b); };
+        modal.innerHTML=nameCard(); modal.hidden=false;
+        document.body.classList.add('modal-open');
+        return;
+      }
+      saveEvent(inv); return;
+    }
     if(t.closest('[data-cover-pick]')){ pickCover(); return; }
     if(t.closest('[data-cover-remove]')){ dropCover(loadDraft()); return; }
     if(t.closest('[data-map]')){
@@ -3542,13 +3570,22 @@ function eventDock(id){
     }
 
     if(t.closest('[data-mephoto]')){ pickMePhoto(); return; }
-    if(t.closest('[data-mesave]')){ saveMe(); toast('Profile saved'); repaintProfile(); return; }
+    if(t.closest('[data-mesave]')){ saveMe(); propagateMe(); toast('Profile saved'); repaintProfile(); return; }
     var clm=t.closest('[data-claim]');
     if(clm){ doClaim(clm.dataset.claim, false); return; }
     if(t.closest('[data-claim-go]')){
       var cin=document.getElementById('claim-name'), cv=cin&&cin.value.trim();
       if(!cv){ toast('Type your name first','err'); return; }
       doClaim(cv, true); return;
+    }
+    if(t.closest('[data-name-go]')){
+      var nin=document.getElementById('claim-name'), nv=nin&&nin.value.trim();
+      if(!nv){ toast('Type your name first','err'); return; }
+      var mn=loadMe(); mn.name=nv; saveMe();
+      var cb=pendingName; pendingName=null;
+      closeModal();
+      if(cb) cb();
+      return;
     }
 
     var sec=t.closest('[data-sec]');
@@ -3797,6 +3834,21 @@ function eventDock(id){
     app.innerHTML=renderProfile(); chrome.innerHTML=bottomNav('profile');
   }
   repaintMe = repaintProfile;
+  /* a profile edit shows up everywhere this uid already appears */
+  function propagateMe(){
+    var m=loadMe(), av=meAvatar(), uids=myUids();
+    STORE.events.forEach(function(ev){
+      if(uids.indexOf(ev.hostUid)>-1){ ev.hostName=m.name||ev.hostName; ev.hostAvatarUrl=av; }
+      (ev.guestPreview||[]).forEach(function(g){
+        if(g.uid===m.uid){ g.name=m.name||g.name; g.avatarUrl=av; } });
+      (ev.messages||[]).forEach(function(msg){
+        if(msg.fromUid===m.uid){ msg.fromName=m.name||msg.fromName; msg.fromAvatarUrl=av; } });
+    });
+    if(STORE.mode==='live' && window.D2C && D2C.propagateProfile){
+      D2C.propagateProfile({ uid:m.uid, name:m.name, avatarUrl:av, rsvp:m.rsvp })
+        .catch(function(e){ console.warn('propagate failed', e); });
+    }
+  }
   function pickMePhoto(){
     var input=document.getElementById('face-input');
     input.value='';
@@ -3806,32 +3858,45 @@ function eventDock(id){
       if(!/^image\//.test(f.type)){ toast('That file isn\u2019t an image.','err'); return; }
       shrinkImage(f,192,function(url){
         if(!url){ toast('Could not read that image.','err'); return; }
-        var m=loadMe(); m.photo=url; saveMe(); repaintProfile();
+        var m=loadMe(); m.photo=url; saveMe(); propagateMe(); repaintProfile();
       });
     };
     input.click();
   }
 
   /* ---------- claiming a spot on a public event ---------- */
-  var claimShown={};
+  var claimShown={}, pendingRsvp=null, pendingName=null;
   function maybeClaim(id){
     var ev=findEvent(id); if(!ev) return;
     var m=loadMe();
     /* remember that this uid opened this event, whoever they turn out to be */
     if(m.events.indexOf(ev.id)<0){ m.events.push(ev.id); saveMe(); }
-    if(m.name || m.claims[ev.id] || claimShown[ev.id] || ev.role==='hosting' || !isPublicEvent(ev)) return;
+    if(m.name || m.claims[ev.id] || claimShown[ev.id] || ev.role==='hosting') return;
     if(!modal.hidden) return;
     claimShown[ev.id]=1;
     modal.innerHTML=claimCard(ev); modal.hidden=false;
     document.body.classList.add('modal-open');
   }
   function doClaim(name, custom){
-    var id=route().id, m=loadMe();
+    var id=route().id, m=loadMe(), ev=findEvent(id);
     m.claims[id]=name;
     if(custom || !m.name) m.name=name;
+    if(!custom && ev){
+      claimList(ev).forEach(function(g){
+        if(g.name===name){
+          if(g.phone && !m.phone) m.phone=g.phone;
+          if(g.avatarUrl && !m.photo) m.photo=g.avatarUrl;
+        }
+      });
+    }
     if(m.events.indexOf(id)<0) m.events.push(id);
+    var pr=pendingRsvp; pendingRsvp=null;
     saveMe(); closeModal();
     toast('Welcome, '+fname(name)+'!');
+    if(pr && pr.id===id){
+      var pb=document.querySelector('#rsvp button[data-k="'+pr.k+'"]');
+      if(pb) rsvp(pb);
+    }
   }
   function repaintStep4(){
     var box=document.getElementById('c4');
@@ -3966,7 +4031,7 @@ function eventDock(id){
   }
 
   function closeModal(){
-    confirmFn=null;
+    confirmFn=null; pendingRsvp=null; pendingName=null;
     if(modal.hidden) return;
     modal.hidden=true; modal.innerHTML='';
     document.body.classList.remove('modal-open');
@@ -4013,7 +4078,15 @@ function eventDock(id){
     var box=btn.parentNode, k=btn.dataset.k, id=route().id,
         cur=box.querySelector('[aria-pressed="true"]');
     if(cur===btn) return;
-    var m=loadMe(), prev=m.rsvp[id]||'';
+    var m=loadMe();
+    if(!m.name){
+      var gev=findEvent(id);
+      pendingRsvp={ id:id, k:k };
+      if(gev){ modal.innerHTML=claimCard(gev); modal.hidden=false;
+               document.body.classList.add('modal-open'); }
+      return;
+    }
+    var prev=m.rsvp[id]||'';
     var n={going:+box.dataset.going, maybe:+box.dataset.maybe, cant:+box.dataset.cant};
     if(cur) n[cur.dataset.k]--;
     n[k]++;
@@ -4416,7 +4489,7 @@ async function seed(){
 /* the signed-in visitor, shaped like the old hardcoded person */
 function meIdent(){
   const m = window.loadMe ? loadMe() : { uid: "", name: "" };
-  return { fsId: m.uid || "", name: m.name || "You", av: window.meAvatar ? meAvatar() : "" };
+  return { fsId: m.uid || "", name: m.name || "Guest", av: window.meAvatar ? meAvatar() : "" };
 }
 
 /* ---------------- 2. upload ---------------- */
@@ -4658,6 +4731,20 @@ async function deleteEvent(id){
   ok("event deleted: " + FS_ROOT.join("/") + "/events/" + id);
 }
 
+/* ---------------- profile propagation ---------------- */
+async function propagateProfile(p){
+  const { db, fs } = await initFirebase();
+  const evs = await fs.getDocs(fs.query(
+    fs.collection(db, ...FS_ROOT, "events"), fs.where("hostUid", "==", p.uid)));
+  await Promise.all(evs.docs.map(d =>
+    fs.updateDoc(d.ref, { hostName: p.name, hostAvatarUrl: p.avatarUrl })));
+  await Promise.all(Object.keys(p.rsvp || {}).map(id =>
+    fs.setDoc(fs.doc(db, ...FS_ROOT, "events", id, "guests", p.uid),
+      { name: p.name, avatarUrl: p.avatarUrl }, { merge: true }).catch(() => {})));
+  ok("profile propagated to " + evs.size + " hosted event(s) and " +
+     Object.keys(p.rsvp || {}).length + " RSVP(s)");
+}
+
 /* ---------------- RSVP ----------------
    One guests doc per visitor uid, so re-answering overwrites instead of
    piling up rows, and the counts move by increments on the event doc.   */
@@ -4771,7 +4858,7 @@ async function sendMessage(eventId, text){
 
 window.D2C = {
   pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
-  saveProfile, findByPhone, setRsvp,
+  saveProfile, findByPhone, setRsvp, propagateProfile,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
