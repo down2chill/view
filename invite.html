@@ -3399,21 +3399,22 @@ function takenNames(ev){
 }
 function claimCard(ev){
   var taken = takenNames(ev);
-  var rows = claimList(ev).map(function(g){
-    if(taken[g.name.toLowerCase()])
-      return '<div class="claim-row off"><img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
-        '<b>' + h(g.name) + '</b><span class="tk">Taken</span></div>';
-    return '<button class="claim-row" type="button" data-claim="' + h(g.name) + '">' +
-      '<img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
-      '<b>' + h(g.name) + '</b>' + (g.phone ? '<span>' + h(g.phone) + '</span>' : '') +
-    '</button>';
-  }).join('');
+  /* a claimed name simply is not on the menu any more */
+  var rows = claimList(ev).filter(function(g){ return !taken[g.name.toLowerCase()]; })
+    .map(function(g){
+      return '<button class="claim-row" type="button" data-claim="' + h(g.name) + '">' +
+        '<img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
+        '<b>' + h(g.name) + '</b>' + (g.phone ? '<span>' + h(g.phone) + '</span>' : '') +
+      '</button>';
+    }).join('');
   return '<div class="modal-card claim">' +
     '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
     '<div class="modal-ic">\uD83D\uDC4B</div>' +
     '<h3 id="modal-h">Who are you?</h3>' +
-    '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name, or type it below.</p>' +
-    (rows ? '<div class="claim-list">' + rows + '</div><div class="claim-or"><span>or</span></div>' : '') +
+    (rows
+      ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name, or type it below.</p>' +
+        '<div class="claim-list">' + rows + '</div><div class="claim-or"><span>or</span></div>'
+      : '<p>Type your name so ' + h(fname(ev.hostName)) + ' knows who\u2019s coming.</p>') +
     '<div class="addbox">' +
       '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
       '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
@@ -4606,6 +4607,21 @@ function eventDock(id){
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden) syncLinks();
   });
+
+  (function(){
+    var vv=window.visualViewport;
+    if(!vv || !/Android/i.test(navigator.userAgent) || !/Firefox/i.test(navigator.userAgent)) return;
+    var shell=document.getElementById('shell');
+    function fit(){
+      if(vv.scale && vv.scale>1.02) return;      /* leave pinch-zoom alone */
+      shell.style.bottom='auto';
+      shell.style.height=vv.height+'px';
+    }
+    vv.addEventListener('resize',fit);
+    window.addEventListener('resize',fit);
+    window.addEventListener('orientationchange',fit);
+    fit();
+  })();
 
   window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
   window.addEventListener('resize',function(){ if(!menu.hidden) closeMenu(); });
