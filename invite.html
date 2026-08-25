@@ -54,6 +54,8 @@ svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .round-btn{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;background:#fff;
   color:var(--ink);box-shadow:0 3px 12px rgba(40,40,120,.14);transition:transform .16s}
 .round-btn:hover{transform:translateY(-1px)}
+.top .logo{margin-left:4px;font-size:clamp(16px,4.4vw,19px)}
+.top .logo b{right:-11px;top:-7px;font-size:10px}
 .page-h{display:flex;align-items:center;gap:12px;padding:6px 0 18px}
 .page-h h1{font:700 clamp(34px,10vw,46px)/1.02 var(--disp);letter-spacing:-.03em;margin:0}
 .page-h .round-btn{margin-left:0}
@@ -152,8 +154,9 @@ button.cal-c:hover{background:#faf9ff}
 .ev-lab i{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:3px;vertical-align:1px}
 .cal-grid.week .cal-c{min-height:96px}
 .cal-dow.week span{padding-bottom:4px}
-.searchbar.cal-search{display:none}
-.searchbar.cal-search.open{display:flex}
+.searchbar.cal-search,.searchbar.home-search{display:none}
+.searchbar.cal-search.open,.searchbar.home-search.open{display:flex}
+.round-btn.on{background:var(--primary);color:#fff;box-shadow:0 4px 14px -3px rgba(64,56,240,.5)}
 .no-hit{text-align:center;color:var(--muted);padding:40px 20px;font-size:15.5px}
 .no-hit b{color:var(--ink)}
 
@@ -370,7 +373,7 @@ a.guest:hover img,.more-g:hover{transform:scale(1.05)}
 .regen{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;
   border-top:1px solid var(--line);color:var(--primary);font-weight:600;font-size:16px}
 .regen:hover{background:#faf9ff}
-.menu{position:absolute;right:14px;top:calc(100% - 8px);z-index:30;min-width:240px;background:var(--card);
+.menu{position:fixed;left:0;top:0;z-index:60;width:252px;max-width:calc(100vw - 20px);background:var(--card);
   border-radius:var(--r-md);padding:8px;box-shadow:0 18px 40px -10px rgba(20,20,80,.28),0 0 0 1px rgba(20,20,80,.06)}
 .menu[hidden]{display:none}
 .menu button{display:flex;align-items:center;gap:14px;width:100%;padding:13px 12px;border-radius:11px;
@@ -378,6 +381,10 @@ a.guest:hover img,.more-g:hover{transform:scale(1.05)}
 .menu button:hover{background:#f5f4fd}
 .menu svg.i{width:21px;height:21px;color:var(--ink)}
 .menu .danger,.menu .danger svg.i{color:#ef4444}
+
+.hid-note{margin:18px 2px 0;font-size:14.5px;color:var(--muted)}
+.hid-note button{color:var(--primary);font-weight:700;font-size:inherit}
+.hid-note button:hover{opacity:.75}
 
 /* ============ photos page ============ */
 .pmeta{margin:-8px 0 18px;color:var(--muted);font-size:15px}
@@ -726,6 +733,13 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .cgrid.c3>.full{grid-column:1/-1}
 .c3 section.full{margin-bottom:-16px}
 
+.chead .draft.dim{color:var(--muted-2);cursor:default}
+.elede{margin:-16px 0 24px;font:600 clamp(15px,4vw,17.5px)/1.35 var(--disp);letter-spacing:-.01em;color:var(--primary)}
+.ghost.wide{flex:none;justify-content:center;min-height:62px;padding:0 22px}
+.modal-ic.warn{background:linear-gradient(145deg,#fee2e2,#fce7f3);color:#dc2626}
+.modal-ic.warn svg.i{width:32px;height:32px}
+.modal-cta.danger{background:linear-gradient(100deg,#ef4444,#dc2626);
+  box-shadow:0 10px 22px -8px rgba(220,38,38,.6)}
 /* ---- step 4: guest picker ---- */
 .cgrid.c4{gap:30px}
 .c4 .lede{margin:0 0 4px;font:700 clamp(16px,4.3vw,19px)/1.35 var(--disp);letter-spacing:-.02em}
@@ -849,7 +863,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
   .g-row{padding:14px;gap:12px}
   .g-txt p{white-space:normal;font-size:14.5px}
   .g-av img{width:48px;height:48px}
-  .menu{right:10px;min-width:0;width:calc(100% - 20px)}
+  .menu{width:min(252px,calc(100vw - 20px))}
   .slink-top{flex-wrap:wrap;gap:14px}
   .slink-top .ghost{margin-left:0;flex:1 0 100%;justify-content:center}
   .dock>*{gap:7px}
@@ -995,6 +1009,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 <symbol id="cap" viewBox="0 0 24 24"><path d="M2.8 9.1 12 4.8l9.2 4.3-9.2 4.3Z"/><path d="M6.6 10.9v4.5c0 1.5 2.4 2.7 5.4 2.7s5.4-1.2 5.4-2.7v-4.5M20.6 9.7v5.1"/></symbol>
 <symbol id="tent" viewBox="0 0 24 24"><path d="M2.4 19.6h19.2"/><path d="m5 19.6 4.6-8.4 3 5.5"/><path d="m12.2 19.6 3.4-6.2 3.8 6.2"/></symbol>
 <symbol id="grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2.2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2.2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2.2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2.2"/></symbol>
+<symbol id="eye-off" viewBox="0 0 24 24"><path d="M9.9 5.2A9.8 9.8 0 0 1 12 5c5.2 0 9.4 4.8 9.4 7 0 .9-.7 2.2-2 3.5"/><path d="M6.4 6.8C3.9 8.4 2.6 10.6 2.6 12c0 2.2 4.2 7 9.4 7 1.5 0 2.9-.4 4.1-1"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m4 4 16 16"/></symbol>
 <symbol id="ticket" viewBox="0 0 24 24"><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h15A1.5 1.5 0 0 1 21 8.5v2a2.2 2.2 0 0 0 0 3v2A1.5 1.5 0 0 1 19.5 17h-15A1.5 1.5 0 0 1 3 15.5v-2a2.2 2.2 0 0 0 0-3Z"/><path d="M14 7v10"/></symbol>
 <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6.6V12l3.7 2.2"/></symbol>
 <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5.5" width="18" height="13" rx="2.6"/><path d="m3.9 7.2 7.2 5.3a1.5 1.5 0 0 0 1.8 0l7.2-5.3"/></symbol>
@@ -1020,12 +1035,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 <div id="toast" class="toast" hidden></div>
 <div class="modal" id="app-modal" role="dialog" aria-modal="true" aria-labelledby="modal-h" hidden></div>
 <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden></div>
-<div class="menu" id="row-menu" role="menu" hidden>
-  <button type="button" role="menuitem"><svg class="i"><use href="#check"/></svg>Change RSVP Status</button>
-  <button type="button" role="menuitem"><svg class="i"><use href="#chat-dots"/></svg>Message Guest</button>
-  <button type="button" role="menuitem"><svg class="i"><use href="#person"/></svg>View Profile</button>
-  <button type="button" role="menuitem" class="danger"><svg class="i"><use href="#trash"/></svg>Remove Invitation</button>
-</div>
+<div class="menu" id="row-menu" role="menu" hidden></div>
 <script>
 /* =====================================================================
    DATA TABLE — every screen reads from here. Add a row, it shows up in
@@ -1308,6 +1318,12 @@ var STORE = {
 
 function findEvent(key){ return STORE.byId[key] || null; }
 
+var GUEST_MENU =
+  '<button type="button" role="menuitem"><svg class="i"><use href="#check"/></svg>Change RSVP Status</button>' +
+  '<button type="button" role="menuitem"><svg class="i"><use href="#chat-dots"/></svg>Message Guest</button>' +
+  '<button type="button" role="menuitem"><svg class="i"><use href="#person"/></svg>View Profile</button>' +
+  '<button type="button" role="menuitem" class="danger"><svg class="i"><use href="#trash"/></svg>Remove Invitation</button>';
+
 /* ---------- time ---------- */
 function ago(isoTs){
   var t = Date.parse(isoTs);
@@ -1436,13 +1452,39 @@ function matches(ev, q){
   if(!q) return true;
   return ev.title.toLowerCase().indexOf(q.trim().toLowerCase()) > -1;
 }
-function eventsOn(iso, q){
-  return STORE.events.filter(function(e){ return e.dateISO === iso && matches(e, q); });
+/* ---------- events hidden on this device ----------
+   "Hide" is personal: nothing is written to the event, the ids just sit in
+   localStorage and every list filters them out. Reversible from the list. */
+var HIDDEN_KEY = 'd2c.hidden.v1', HIDDEN = null;
+function hiddenSet(){
+  if(HIDDEN) return HIDDEN;
+  HIDDEN = {};
+  try{
+    var raw = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
+    if(raw && raw.length) raw.forEach(function(id){ HIDDEN[id] = 1; });
+  }catch(e){}
+  return HIDDEN;
 }
-function upcoming(){ return STORE.events.filter(function(e){ return e.dateISO >= TODAY; }); }
-function past(){ return STORE.events.filter(function(e){ return e.dateISO < TODAY; })
+function saveHidden(){
+  var out = [], k;
+  for(k in HIDDEN) if(HIDDEN[k]) out.push(k);
+  try{ localStorage.setItem(HIDDEN_KEY, JSON.stringify(out)); }catch(e){}
+}
+function isHidden(ev){ var x = hiddenSet(); return !!(x[ev.id] || (ev.slug && x[ev.slug])); }
+function hideId(ev){ hiddenSet()[ev.id] = 1; if(ev.slug) HIDDEN[ev.slug] = 1; saveHidden(); }
+function unhideAll(){ HIDDEN = {}; saveHidden(); }
+function hiddenCount(){
+  return STORE.events.filter(isHidden).length;
+}
+function shown(list){ return list.filter(function(e){ return !isHidden(e); }); }
+
+function eventsOn(iso, q){
+  return shown(STORE.events.filter(function(e){ return e.dateISO === iso && matches(e, q); }));
+}
+function upcoming(){ return shown(STORE.events.filter(function(e){ return e.dateISO >= TODAY; })); }
+function past(){ return shown(STORE.events.filter(function(e){ return e.dateISO < TODAY; }))
   .slice().reverse(); }
-function hosting(){ return STORE.events.filter(function(e){ return e.role === "hosting"; }); }
+function hosting(){ return shown(STORE.events.filter(function(e){ return e.role === "hosting"; })); }
 </script>
 <script>
 /* ================= tiny helpers ================= */
@@ -1467,6 +1509,9 @@ function mapsUrl(ev){
     encodeURIComponent((ev.venue?ev.venue+', ':'')+ev.address);
 }
 function skel(msg){ return '<p class="skel">'+h(msg||'Loading\u2026')+'</p>'; }
+/* one wordmark, used by the home header and by every subpage's back row */
+function brandMark(){ return '<span class="logo">DOWN<i>2</i>CHILL<b>\u2726</b></span>'; }
+
 function statusPill(ev){
   if(ev.dateISO<TODAY) return '<span class="pill went">'+(ev.role==='hosting'?'Hosted':'Went')+'</span>';
   return ev.role==='hosting' ? '<span class="pill host">Hosting</span>'
@@ -1478,7 +1523,8 @@ function eventCard(ev){
   var dp=dparts(ev.dateISO);
   return '<a class="ecard" href="#event/'+ev.id+'" data-nav>'+
     img(ev.thumbUrl, ev.title, 'thumb')+
-    '<span class="emore" role="presentation">'+ico('more')+'</span>'+
+    '<span class="emore" data-evmenu="'+ev.id+'" role="button" tabindex="0" aria-haspopup="true" '+
+      'aria-expanded="false" aria-label="Options for '+h(ev.title)+'">'+ico('more')+'</span>'+
     '<div class="ebody">'+
       '<div class="etop">'+
         '<div class="einfo">'+
@@ -1515,9 +1561,12 @@ function dataBanner(){
 function homeList(tab,q){
   var list = (tab==='hosting'?hosting() : tab==='past'?past() : upcoming())
               .filter(function(e){ return matches(e,q); });
+  var hid = hiddenCount(),
+      foot = hid ? '<p class="hid-note">'+hid+(hid===1?' event hidden':' events hidden')+
+                   ' \u00B7 <button type="button" data-unhide>Show all</button></p>' : '';
   if(!list.length){
-    return q ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
-             : '<p class="empty">Nothing here yet.</p>';
+    return (q ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
+              : '<p class="empty">Nothing here yet.</p>') + foot;
   }
   var body='',open=false;
   groupByMonth(list).forEach(function(row){
@@ -1525,17 +1574,19 @@ function homeList(tab,q){
     else body+=eventCard(row.ev);
   });
   if(open) body+='</div>';
-  return body;
+  return body + foot;
 }
 
-function renderHome(tab,q){
+function renderHome(tab,q,open){
   tab=tab||'upcoming';
+  open = !!open || !!q;
   var heading = tab==='hosting'?'Hosting' : tab==='past'?'Past' : 'Upcoming';
   return '<div class="sky"><div class="wrap">'+
       '<div class="brand"><a class="icon-btn" href="#home" aria-label="Back">'+ico('back')+'</a>'+
-        '<span class="logo">DOWN<i>2</i>CHILL<b>\u2726</b></span></div>'+
+        brandMark()+'</div>'+
       '<div class="page-h"><h1>Events</h1><div class="btns">'+
-        '<button class="round-btn" type="button" data-focus-search aria-label="Search events">'+ico('search')+'</button>'+
+        '<button class="round-btn'+(open?' on':'')+'" type="button" data-focus-search '+
+          'aria-expanded="'+!!open+'" aria-label="Search events">'+ico('search')+'</button>'+
         '<button class="round-btn" type="button" aria-label="Filters">'+ico('sliders')+'</button>'+
       '</div></div>'+
       '<div class="segs" role="tablist">'+
@@ -1544,7 +1595,7 @@ function renderHome(tab,q){
             t.charAt(0).toUpperCase()+t.slice(1)+'</button>';
         }).join('')+
       '</div>'+
-      '<div class="searchbar">'+ico('search')+
+      '<div class="searchbar home-search'+(open?' open':'')+'">'+ico('search')+
         '<input type="search" id="q-home" placeholder="Search events" aria-label="Search events" value="'+h(q||'')+'">'+
         '<span class="filt">'+ico('sliders')+'</span></div>'+
     '</div></div>'+
@@ -1678,10 +1729,11 @@ function renderEvent(id){
   return '<div class="wrap">'+
     '<header class="top">'+
       '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">'+ico('back')+'</a>'+
-      '<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
-      '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
+      '<button class="icon-btn" type="button" data-evmenu="'+ev.id+'" aria-haspopup="true" '+
+        'aria-expanded="false" aria-label="More options">'+ico('more')+'</button>'+
     '</header>'+
     '<h1 class="title">'+h(ev.title)+'</h1>'+
     '<div class="grid"><div class="colA">'+
@@ -1794,7 +1846,7 @@ function renderGuests(id){
     '<header class="top">'+
       '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
         ico('back')+'</a>'+
-      '<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
@@ -1838,7 +1890,7 @@ function renderPhotos(id){
     '<header class="top">'+
       '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
         ico('back')+'</a>'+
-      '<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="album" data-share-id="'+ev.id+
         '" aria-label="Share album">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
@@ -1885,7 +1937,7 @@ function renderChat(id){
     '<header class="top">'+
       '<a class="icon-btn" href="#event/'+ev.id+'" data-back="event/'+ev.id+'" aria-label="Back to event">'+
         ico('back')+'</a>'+
-      '<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
     '</header>'+
@@ -1912,7 +1964,7 @@ function renderDebug(){
   return '<div class="wrap">'+
     '<header class="top">'+
       '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">'+ico('back')+'</a>'+
-      '<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+
     '</header>'+
     '<h1 class="title">Firebase Debug</h1>'+
 
@@ -2007,6 +2059,7 @@ function blankDraft(){
            invitees:[], extra:[], inviteMsg:'', msgTouched:false };
 }
 function loadDraft(){
+  if(EDIT) return EDIT.draft;        /* step 3 edits the event in place */
   if(DRAFT) return DRAFT;
   DRAFT = blankDraft();
   try{
@@ -2024,6 +2077,7 @@ function loadDraft(){
   return DRAFT;
 }
 function saveDraft(){
+  if(EDIT) return;                   /* an edit is committed, never autosaved */
   try{
     var d = loadDraft(), o = {};
     for(var k in d){ if(k.charAt(0) !== '_') o[k] = d[k]; }
@@ -2407,7 +2461,7 @@ function step3Body(){
     '<div class="full">' + cardReminders(d) + '</div>';
 }
 function renderCreate3(){
-  return '<div class="wrap">' + createHead(3) +
+  return '<div class="wrap">' + (EDIT ? editHead() : createHead(3)) +
     '<div class="cgrid c3">' + step3Body() + '</div></div>';
 }
 
@@ -2823,6 +2877,95 @@ function inviteFoot(){
     '</div></div>';
 }
 
+/* ================= EDITING AN EXISTING EVENT =================
+   Reuses the step-3 screen wholesale: while EDIT is set, loadDraft() hands
+   back the event's own settings instead of the new-event draft, so every
+   radio, stepper and repaint below works unchanged.
+   ============================================================ */
+var EDIT = null;                     // { id: '...', draft: {...} }
+
+function numOf(s, dflt){
+  var m = String(s == null ? '' : s).match(/\d+/);
+  return m ? +m[0] : dflt;
+}
+/* An event document -> the draft shape step 3 edits. Seeded events predate
+   these fields, so every one of them falls back to something sensible. */
+function eventToDraft(ev){
+  var d = blankDraft();
+  d.title = ev.title; d.date = ev.dateISO; d.time = ev.time;
+  d.venue = ev.venue; d.address = ev.address; d.about = ev.about;
+  d.vibes = (ev.vibes && ev.vibes.length) ? ev.vibes.slice() : [];
+  d.capMode  = ev.capacityMode || (/unlimited|no limit/i.test(ev.capacity || '') ? 'unlimited' : 'custom');
+  d.capacity = ev.capacityMax || numOf(ev.capacity, 30);
+  d.invite   = ev.inviteType && /^(Invite Only|Open Invite|Public Link)$/.test(ev.inviteType)
+             ? ev.inviteType : 'Invite Only';
+  d.plusMode = ev.plusOnesMode || (/not allowed/i.test(ev.plusOnes || '') ? 'none' : 'one');
+  d.plusN    = ev.plusOnesMax > 1 ? ev.plusOnesMax : 2;
+  d.rsvpMode = ev.rsvpMode || (ev.rsvpBy ? 'custom' : 'none');
+  d.rsvpBy   = ev.rsvpBy || ev.dateISO;
+  d.rsvpTouched = true;
+  d.entryMode = ev.entryMode || (/^free$/i.test(ev.entry || '') ? 'free' : 'custom');
+  d.entryNote = ev.entryNote || (d.entryMode === 'custom' ? (ev.entry || '') : '');
+  d.visibility = ev.visibilityMode || 'friends';
+  d.reminders = (ev.reminders || []).slice();
+  d.notifyChanges = ev.notifyChanges !== false;
+  return d;
+}
+function startEdit(id){
+  var ev = findEvent(id);
+  if(!ev) return false;
+  EDIT = { id: ev.id, draft: eventToDraft(ev) };
+  return true;
+}
+function endEdit(){ EDIT = null; }
+
+/* Just the part of the event document step 3 owns. draftDoc() folds this in
+   so a created event and an edited one can never drift apart. */
+function settingsPatch(d){
+  return {
+    capacity: capLabel(d), capacityMode: d.capMode,
+    capacityMax: d.capMode === 'unlimited' ? 0 : d.capacity,
+    entry: entryLabel(d), entryMode: d.entryMode, entryNote: d.entryNote.trim(),
+    inviteType: d.invite,
+    plusOnes: plusLabel(d), plusOnesMode: d.plusMode, plusOnesMax: plusMax(d),
+    rsvpBy: rsvpDate(d), rsvpMode: d.rsvpMode,
+    visibility: visOpt(d).lab, visibilityMode: d.visibility,
+    reminders: remSorted(d), reminderLabel: remSummary(d), notifyChanges: !!d.notifyChanges
+  };
+}
+function mergeInto(target, src){
+  for(var k in src) if(src.hasOwnProperty(k)) target[k] = src[k];
+  return target;
+}
+
+/* ---------- edit chrome ---------- */
+function editHead(){
+  return '<header class="chead">' +
+      '<button class="icon-btn" type="button" data-cback aria-label="Back">' + ico('back') + '</button>' +
+      '<span class="logo">DOWN<i>2</i>CHILL</span>' +
+      '<span class="draft dim">Editing</span>' +
+    '</header>' +
+    '<h1 class="title">Edit Event</h1>' +
+    '<p class="elede">' + h(EDIT ? EDIT.draft.title : '') + '</p>';
+}
+function editFoot(){
+  return '<div class="cbar-foot"><div class="cbar-in">' +
+      '<button class="ghost wide" type="button" data-editcancel>Cancel</button>' +
+      '<button class="cta" type="button" id="c-cta" data-editsave>Save Changes' + ico('tick') + '</button>' +
+    '</div></div>';
+}
+
+/* ---------- delete confirmation ---------- */
+function confirmCard(title, body, label){
+  return '<div class="modal-card">' +
+      '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
+      '<div class="modal-ic warn">' + ico('trash') + '</div>' +
+      '<h3 id="modal-h">' + h(title) + '</h3><p>' + h(body) + '</p>' +
+      '<button class="modal-cta danger" type="button" data-confirm-yes>' + h(label) + '</button>' +
+      '<button class="modal-later" type="button" data-modal-close>Keep it</button>' +
+    '</div>';
+}
+
 /* ---------- cover photo: pick, upload, preview ---------- */
 function repaintCover(){
   var w = document.getElementById('cover-wrap');
@@ -2885,7 +3028,7 @@ function dropCover(d){
 /* ---------- turning the draft into an event ---------- */
 /* The shape below is exactly what the events collection already stores, so a
    created event renders through the same code path as a seeded one. */
-function draftDoc(d, id, hostUid){
+function draftBase(d, id, hostUid){
   var me = PERSON['emily'],
       title = d.title.trim(),
       when = d.endTime ? (d.time + ' \u2013 ' + d.endTime) : d.time;
@@ -2895,15 +3038,6 @@ function draftDoc(d, id, hostUid){
     dateISO: d.date, time: when, timeSort: t24(d.time),
     venue: d.venue.trim(), address: d.address.trim(), about: d.about.trim(),
     vibe: d.vibes.length ? d.vibes.join(' \u00B7 ') : 'Chill', vibes: d.vibes.slice(),
-    /* step 3 — the label each screen shows plus the raw value behind it */
-    capacity: capLabel(d), capacityMode: d.capMode,
-    capacityMax: d.capMode === 'unlimited' ? 0 : d.capacity,
-    entry: entryLabel(d), entryMode: d.entryMode, entryNote: d.entryNote.trim(),
-    inviteType: d.invite,
-    plusOnes: plusLabel(d), plusOnesMode: d.plusMode, plusOnesMax: plusMax(d),
-    rsvpBy: rsvpDate(d), rsvpMode: d.rsvpMode,
-    visibility: visOpt(d).lab, visibilityMode: d.visibility,
-    reminders: remSorted(d), reminderLabel: remSummary(d), notifyChanges: !!d.notifyChanges,
     dot: vibeDot(d.vibes), role: 'hosting',
     coverPath: d.coverPath || '', coverUrl: d.coverUrl || '',
     thumbUrl: d.coverUrl || '', mapPath: '', mapUrl: '',
@@ -2918,6 +3052,10 @@ function draftDoc(d, id, hostUid){
     photoCount: 0, lastPhotoLabel: '', chatMessages: [], chatUnread: 0,
     source: 'created'
   };
+}
+function draftDoc(d, id, hostUid){
+  /* step 3's fields live in settingsPatch so create and edit stay identical */
+  return mergeInto(draftBase(d, id, hostUid), settingsPatch(d));
 }
 /* Offline fallback — the same document, kept in memory only. */
 function createLocalEvent(d){
@@ -2974,8 +3112,11 @@ function eventDock(id){
     if(parts[0]==='calendar') return {v:'calendar'};
     if(parts[0]==='debug') return {v:'debug'};
     if(parts[0]==='create') return {v:'create', step: +parts[1] >= 2 && +parts[1] <= 4 ? +parts[1] : 1};
+    if(parts[0]==='edit') return {v:'edit', id:parts[1]};
     return {v:'home'};
   }
+
+  var homeSearch=false;
 
   function render(){
     closeMenu();
@@ -2998,17 +3139,24 @@ function eventDock(id){
 
     /* the create form owns its own state, so it opens before events load */
     if(!STORE.ready && r.v!=='create'){ app.innerHTML=loadingView(); chrome.innerHTML=''; return; }
+    /* leaving the edit screen by any route drops the pending changes */
+    if(r.v!=='edit' && EDIT) endEdit();
+    if(r.v==='edit' && (!EDIT || EDIT.id!==r.id) && !startEdit(r.id)){
+      toast('That event is no longer here','err'); r={v:'home'};
+      history.replaceState({d:0},'','#home');
+    }
     var curKeyChanged = curKey !== key;
     if(curKey && curKeyChanged) scrolls[curKey]=window.scrollY;
 
     closeLb(); closeModal();
-    if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ); chrome.innerHTML=bottomNav('home'); }
+    if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ,homeSearch); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
     else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(r.id); }
     else if(r.v==='chat'){     app.innerHTML=renderChat(r.id);  chrome.innerHTML=composer(r.id);
                                scrollThread(); }
     else if(r.v==='photos'){   app.innerHTML=renderPhotos(r.id);chrome.innerHTML=''; }
     else if(r.v==='debug'){    app.innerHTML=renderDebug();     chrome.innerHTML=bottomNav(''); }
+    else if(r.v==='edit'){     app.innerHTML=renderCreate3();  chrome.innerHTML=editFoot(); }
     else if(r.v==='create'){   app.innerHTML=r.step===4?renderCreate4()
                                               :r.step===3?renderCreate3()
                                               :r.step===2?renderCreate2():renderCreate1();
@@ -3016,7 +3164,7 @@ function eventDock(id){
     else {                     app.innerHTML=renderGuests(r.id);chrome.innerHTML=''; }
 
     document.body.className = (r.v==='event') ? 'has-dock'
-                            : (r.v==='create') ? 'has-cbar'
+                            : (r.v==='create'||r.v==='edit') ? 'has-cbar'
                             : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
 
     curKey=key;
@@ -3045,6 +3193,26 @@ function eventDock(id){
   document.addEventListener('click',function(e){
     var t=e.target;
 
+    var em=t.closest('[data-evmenu]');
+    if(em){
+      e.preventDefault(); e.stopPropagation();
+      openEventMenu(em);
+      return;
+    }
+    var mi=t.closest('[data-emenu]');
+    if(mi){
+      /* the menu is parented into the card, which is an <a> */
+      e.preventDefault();
+      var act=mi.dataset.emenu, mid=menuEvent;
+      closeMenu();
+      if(act==='edit')   go('#edit/'+mid);
+      if(act==='hide')   hideOne(mid);
+      if(act==='delete') askDelete(mid);
+      if(act==='share')  doShare('event', mid);
+      if(act==='link')   copyLink(absUrl('event/'+mid));
+      return;
+    }
+
     var sh=t.closest('[data-share-kind]');
     if(sh){ doShare(sh.dataset.shareKind, sh.dataset.shareId); return; }
 
@@ -3059,7 +3227,9 @@ function eventDock(id){
     }
 
     if(t.closest('[data-cback]')){
-      var st=route().step;
+      var r0=route();
+      if(r0.v==='edit'){ leaveEdit(); return; }
+      var st=r0.step;
       if(st>1) swapHash(st===2?'#create':'#create/'+(st-1)); else back('home');
       return;
     }
@@ -3071,6 +3241,11 @@ function eventDock(id){
     }
     if(t.closest('[data-csave]')){ saveDraft(); swapHash('#create/3'); return; }
     if(t.closest('[data-cnext3]')){ saveDraft(); swapHash('#create/4'); return; }
+    if(t.closest('[data-editcancel]')){ leaveEdit(); return; }
+    var esave=t.closest('[data-editsave]');
+    if(esave){ commitEdit(esave); return; }
+    if(t.closest('[data-confirm-yes]')){ var v=confirmFn; closeModal(); if(v) v(); return; }
+    if(t.closest('[data-modal-close]') || t===modal){ closeModal(); return; }
     var inv=t.closest('[data-cinvite]');
     if(inv){ saveEvent(inv); return; }
     if(t.closest('[data-cover-pick]')){ pickCover(); return; }
@@ -3189,6 +3364,7 @@ function eventDock(id){
     var tab=t.closest('[data-tab]');
     if(tab){ homeTab=tab.dataset.tab; render(); return; }
 
+
     var step=t.closest('[data-step]');
     if(step){
       var n=+step.dataset.step;
@@ -3224,9 +3400,23 @@ function eventDock(id){
       dy.dataset.open = dy.dataset.open==='1'?'0':'1';
       calState.open = +dy.dataset.open; return; }
 
-    if(t.closest('[data-focus-search]')){
-      var qi=document.getElementById('q-home');
-      if(qi){ qi.focus(); qi.select(); }
+    if(t.closest('[data-unhide]')){ unhideAll(); toast('Hidden events restored'); render(); return; }
+
+    var fs0=t.closest('[data-focus-search]');
+    if(fs0){
+      var bar=document.querySelector('.home-search');
+      if(!bar) return;
+      homeSearch=!bar.classList.contains('open');
+      bar.classList.toggle('open', homeSearch);
+      fs0.classList.toggle('on', homeSearch);
+      fs0.setAttribute('aria-expanded', String(homeSearch));
+      var qi=bar.querySelector('input');
+      if(homeSearch){ qi.focus(); qi.select(); }
+      else if(homeQ){
+        homeQ=''; qi.value='';
+        var lb=document.getElementById('list-body');
+        if(lb) lb.innerHTML=homeList(homeTab,homeQ);
+      }
       return;
     }
     if(t.closest('[data-toggle-search]')){
@@ -3250,8 +3440,10 @@ function eventDock(id){
     if(dots){
       e.stopPropagation();
       if(anchor===dots){ closeMenu(); return; }
-      closeMenu(); anchor=dots; dots.setAttribute('aria-expanded','true');
-      dots.closest('.g-row').appendChild(menu); menu.hidden=false; return;
+      closeMenu();
+      menu.innerHTML=GUEST_MENU; menuEvent=null;
+      anchor=dots; dots.setAttribute('aria-expanded','true');
+      placeMenu(dots); return;
     }
     if(!t.closest('#row-menu')) closeMenu();
   });
@@ -3492,6 +3684,7 @@ function eventDock(id){
   }
 
   function closeModal(){
+    confirmFn=null;
     if(modal.hidden) return;
     modal.hidden=true; modal.innerHTML='';
     document.body.classList.remove('modal-open');
@@ -3548,8 +3741,116 @@ function eventDock(id){
       var el=document.getElementById('c-'+x); if(el) el.textContent=n[x]; });
   }
 
+  /* ---------- event menu ---------- */
+  var menuEvent=null, confirmFn=null;
+  function mItem(act,icon,label,danger){
+    return '<button type="button" role="menuitem"'+(danger?' class="danger"':'')+
+      ' data-emenu="'+act+'">'+ico(icon)+label+'</button>';
+  }
+  /* Editing and deleting belong to the Hosting tab only. Everywhere else an
+     event is somebody else's plan, so the choices are share and hide. */
+  function openEventMenu(btn){
+    var id=btn.dataset.evmenu, ev=findEvent(id);
+    if(!ev) return;
+    if(anchor===btn){ closeMenu(); return; }
+    closeMenu();
+    var onCard = !!btn.closest('.ecard'),
+        ctx = onCard ? homeTab
+            : ev.role==='hosting' ? 'hosting'
+            : ev.dateISO<TODAY ? 'past' : 'upcoming';
+    menu.innerHTML =
+      ctx==='hosting' ? mItem('edit','pen','Edit event')+
+                        mItem('share','net','Share event')+
+                        mItem('delete','trash','Delete event',1)
+    : ctx==='past'    ? mItem('hide','eye-off','Hide event')
+    :                   mItem('share','net','Share event')+
+                        mItem('hide','eye-off','Hide event');
+    menuEvent=id; anchor=btn; btn.setAttribute('aria-expanded','true');
+    placeMenu(btn);
+  }
+  /* Parked on <body> and positioned against the viewport, so no card can ever
+     paint over it and no card can clip it. */
+  function placeMenu(btn){
+    if(menu.parentNode!==document.body) document.body.appendChild(menu);
+    menu.hidden=false;
+    menu.style.visibility='hidden';
+    var r=btn.getBoundingClientRect(), w=menu.offsetWidth, hgt=menu.offsetHeight,
+        left=Math.min(Math.max(10, r.right-w), Math.max(10, window.innerWidth-w-10)),
+        top=r.bottom+8;
+    if(top+hgt > window.innerHeight-10) top=Math.max(10, r.top-hgt-8);
+    menu.style.left=left+'px'; menu.style.top=top+'px'; menu.style.visibility='';
+  }
+
+  /* ---------- editing ---------- */
+  function leaveEdit(){
+    endEdit();
+    var id=route().id;
+    history.replaceState({d:0},'', id?'#event/'+id:'#home');
+    render();
+  }
+  function commitEdit(btn){
+    if(!EDIT) return;
+    var id=EDIT.id, patch=settingsPatch(EDIT.draft), old=btn.innerHTML;
+    btn.disabled=true; btn.innerHTML='<span class="spin"></span>Saving\u2026';
+    function done(){
+      endEdit(); toast('Changes saved');
+      history.replaceState({d:0},'','#event/'+id); render();
+    }
+    function fail(e){
+      btn.disabled=false; btn.innerHTML=old;
+      toast((e&&e.message)||'Could not save the changes','err',5000);
+      if(e) console.error(e);
+    }
+    if(STORE.mode==='live' && window.D2C && D2C.updateEvent) D2C.updateEvent(id,patch).then(done).catch(fail);
+    else {
+      var ev=STORE.byId[id];
+      if(!ev) return fail(new Error('That event is no longer here'));
+      for(var k in patch) ev[k]=patch[k];
+      done();
+    }
+  }
+
+  /* ---------- hiding ---------- */
+  function hideOne(id){
+    var ev=findEvent(id); if(!ev) return;
+    hideId(ev);
+    toast('Hidden from your events');
+    if(route().v!=='home') history.replaceState({d:0},'','#home');
+    render();
+  }
+
+  /* ---------- deleting ---------- */
+  function askDelete(id){
+    var ev=findEvent(id); if(!ev) return;
+    confirmFn=function(){ doDelete(id); };
+    modal.innerHTML=confirmCard('Delete \u201C'+ev.title+'\u201D?',
+      'The event, its guest list, photos and chat all go away. This cannot be undone.',
+      'Delete event');
+    modal.hidden=false;
+    document.body.classList.add('modal-open');
+    var c=modal.querySelector('[data-confirm-yes]'); if(c) c.focus();
+  }
+  function doDelete(id){
+    var after=function(){
+      toast('Event deleted');
+      if(route().v!=='home'){ history.replaceState({d:0},'','#home'); }
+      render();
+    };
+    if(STORE.mode==='live' && window.D2C && D2C.deleteEvent){
+      toast('Deleting\u2026','wait',0);
+      D2C.deleteEvent(id).then(after).catch(function(e){
+        toast((e&&e.message)||'Could not delete the event','err',5000);
+      });
+      return;
+    }
+    STORE.setEvents(STORE.events.filter(function(e){ return e.id!==id; }));
+    after();
+  }
+
   function closeMenu(){
     menu.hidden=true;
+    /* park it back on <body> — its last parent may be about to be re-rendered */
+    if(menu.parentNode!==document.body) document.body.appendChild(menu);
     if(anchor){ anchor.setAttribute('aria-expanded','false'); anchor=null; }
   }
   document.addEventListener('keydown',function(e){
@@ -3568,12 +3869,17 @@ function eventDock(id){
   /* Any store change — first load, a new event, an edited doc, a subcollection
      arriving — repaints the current view in place. */
   STORE.onChange(function(){
-    if(route().v==='create') return;      // never repaint over a half-filled form
+    var rv=route().v;
+    /* never repaint over a half-filled form — but an edit still needs the
+       first load, since it cannot open before its event exists */
+    if(rv==='create'||(rv==='edit'&&EDIT)) return;
     var y=window.scrollY;
     render();
     window.scrollTo(0,y);
   });
 
+  window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
+  window.addEventListener('resize',function(){ if(!menu.hidden) closeMenu(); });
   window.addEventListener('popstate',render);
   window.addEventListener('hashchange',render);
   if(!history.state) history.replaceState({d:0},'',location.hash||'#home');
@@ -4018,6 +4324,36 @@ async function createEvent(draft){
   return evRef.id;
 }
 
+/* ---------------- 5. edit / delete ---------------- */
+async function updateEvent(id, patch){
+  const { db, fs } = await initFirebase();
+  patch = Object.assign({}, patch, { updatedAt: fs.serverTimestamp() });
+  await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", id), patch);
+  ok("event updated: " + FS_ROOT.join("/") + "/events/" + id);
+}
+
+/* Firestore does not cascade, so the subcollections go first. */
+async function deleteEvent(id){
+  const { db, storage, fs, st } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", id);
+
+  let cover = "";
+  try { const snap = await fs.getDoc(evRef); cover = (snap.data() || {}).coverPath || ""; }
+  catch(e){ /* the doc may already be gone */ }
+
+  for(const sub of ["guests", "photos", "activity"]){
+    const snap = await fs.getDocs(fs.collection(evRef, sub));
+    await Promise.all(snap.docs.map(d => fs.deleteDoc(d.ref)));
+  }
+  await fs.deleteDoc(evRef);
+
+  if(cover){
+    try { await st.deleteObject(st.ref(storage, cover)); }
+    catch(e){ warn("cover not removed (" + (e.code || e.message) + ")"); }
+  }
+  ok("event deleted: " + FS_ROOT.join("/") + "/events/" + id);
+}
+
 /* ---------------- live data ---------------- */
 let unsubEvents = null, unsubDetail = [], watchingId = null;
 
@@ -4099,7 +4435,7 @@ async function sendMessage(eventId, text){
 }
 
 window.D2C = {
-  pickPhoto, sendMessage, uploadCover, createEvent,
+  pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
