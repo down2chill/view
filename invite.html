@@ -111,7 +111,7 @@ svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-widt
 
 /* ============ bottom nav ============ */
 .bnav{position:fixed;z-index:25;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));
-  bottom:calc(14px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;
+  bottom:calc(14px + env(safe-area-inset-bottom) + var(--vvb,0px));max-width:560px;margin:0 auto;
   display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:34px;background:#fff;
   box-shadow:0 10px 30px -8px rgba(50,40,140,.24),0 0 0 1px rgba(20,20,80,.04)}
 .bnav-i{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;
@@ -307,7 +307,7 @@ a.guest:hover img,.more-g:hover{transform:scale(1.05)}
 .feed time{margin-left:auto;font-size:13.5px;color:var(--muted-2);white-space:nowrap;padding-left:8px}
 .caught{text-align:center;color:var(--muted-2);font-size:14.5px;margin:22px 0 0;padding-top:20px;border-top:1px solid var(--line)}
 .dock{position:fixed;z-index:20;left:max(14px,env(safe-area-inset-left));right:max(14px,env(safe-area-inset-right));
-  bottom:calc(16px + env(safe-area-inset-bottom));max-width:560px;margin:0 auto;height:66px;border-radius:33px;
+  bottom:calc(16px + env(safe-area-inset-bottom) + var(--vvb,0px));max-width:560px;margin:0 auto;height:66px;border-radius:33px;
   display:flex;align-items:center;
   background:linear-gradient(90deg,#e7eefd 0%,#f8eefe 17%,#f4e4fe 31%,#eceafd 44%,#fbfaff 52%,#efeafd 63%,#f5e8fd 76%,#edf0fd 89%,#f3f7fe 100%);
   box-shadow:0 10px 30px -8px rgba(50,40,140,.22),0 0 0 1px rgba(255,255,255,.7) inset;
@@ -473,7 +473,7 @@ body.lb-open{overflow:hidden}
 .msg.me .bub p,.msg.me time{color:#fff}
 .msg.me time{opacity:.75;text-align:right}
 .chat-empty{text-align:center;color:var(--muted);padding:50px 20px;font-size:15.5px}
-.composer{position:fixed;z-index:25;left:0;right:0;bottom:0;
+.composer{position:fixed;z-index:25;left:0;right:0;bottom:var(--vvb,0px);
   padding:12px max(var(--pad),env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));
   background:rgba(247,247,251,.92);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
   border-top:1px solid var(--line)}
@@ -838,6 +838,20 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .modal-cta.pick:hover{filter:none;border-color:var(--primary);background:#fbfaff}
 .tagn{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   background:var(--soft);color:var(--primary);padding:3px 8px;border-radius:8px}
+.modal-card.claim{max-height:calc(100vh - 48px);overflow-y:auto}
+.modal-cta.pick.on{border-color:var(--primary);background:#f3f0ff;
+  box-shadow:0 0 0 1.5px var(--primary),0 2px 10px rgba(30,30,100,.08)}
+.mg-lab{margin:16px 2px 8px;font:700 12px/1 var(--disp);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);text-align:left}
+.mg-avs{display:flex;gap:16px;justify-content:center;margin:2px 0 8px}
+.mg-av{position:relative;width:76px;height:76px;border-radius:50%;padding:0;
+  border:3px solid var(--line-2);transition:border-color .15s,transform .15s}
+.mg-av:hover{transform:scale(1.04)}
+.mg-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;background:var(--soft)}
+.mg-av.on{border-color:var(--primary)}
+.mg-av.on::after{content:"";position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;
+  border-radius:50%;background:var(--primary);border:3px solid #fff}
+.modal-cta.go{margin-top:16px}
 .modal-ic svg.i{width:32px;height:32px}
 .onote.center{text-align:center;margin-top:14px}
 .round-btn.mini{width:42px;height:42px;flex:none}
@@ -884,7 +898,7 @@ button.view-all{display:block;width:100%;text-align:center}
 .modal-card .addbtn{height:54px;padding:0 16px;font-size:14.5px}
 
 /* fixed step footer */
-.cbar-foot{position:fixed;z-index:22;left:0;right:0;bottom:0;border-top:1px solid var(--line);
+.cbar-foot{position:fixed;z-index:22;left:0;right:0;bottom:var(--vvb,0px);border-top:1px solid var(--line);
   padding:12px max(var(--pad),env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) max(var(--pad),env(safe-area-inset-left));
   background:rgba(247,247,251,.93);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
 .cbar-in{max-width:720px;margin:0 auto;display:flex;align-items:center;gap:16px}
@@ -1424,11 +1438,17 @@ function phoneVerified(){
   return !!p && m.verifiedPhone === p;
 }
 function linkedProfiles(){ return phoneVerified() ? phoneMatches() : []; }
-/* one name across every linked account */
+/* one name (and one face) across every linked account */
 function commonizeName(name){
   var m = loadMe(), reg = regAll();
   m.name = name;
   phoneMatches().forEach(function(p){ p.name = name; if(reg[p.uid]) reg[p.uid].name = name; });
+  try{ localStorage.setItem(REG_KEY, JSON.stringify(reg)); }catch(e){}
+}
+function commonizePhoto(photo){
+  var m = loadMe(), reg = regAll();
+  m.photo = photo;
+  phoneMatches().forEach(function(p){ p.photo = photo; if(reg[p.uid]) reg[p.uid].photo = photo; });
   try{ localStorage.setItem(REG_KEY, JSON.stringify(reg)); }catch(e){}
 }
 /* linking changes who "hosting" means \u2014 recompute every event's role */
@@ -1463,7 +1483,9 @@ function myRsvp(id){
 }
 function saveMe(){
   var m = loadMe(), reg = regAll();
-  reg[m.uid] = { uid: m.uid, name: m.name, phone: m.phone, events: m.events, claims: m.claims, rsvp: m.rsvp };
+  m.at = Date.now();
+  reg[m.uid] = { uid: m.uid, name: m.name, phone: m.phone, photo: m.photo, at: m.at,
+                 events: m.events, claims: m.claims, rsvp: m.rsvp };
   m.linked = linkedProfiles().map(function(p){ return p.uid; });
   try{
     localStorage.setItem(ME_KEY, JSON.stringify(m));
@@ -1471,7 +1493,7 @@ function saveMe(){
   }catch(e){}
   if(STORE.mode === 'live' && window.D2C && D2C.saveProfile){
     D2C.saveProfile({ uid: m.uid, name: m.name, phone: normPhone(m.phone),
-                      photo: m.photo || '', events: m.events, claims: m.claims, rsvp: m.rsvp })
+                      photo: m.photo || '', at: m.at, events: m.events, claims: m.claims, rsvp: m.rsvp })
       .then(function(){ return normPhone(m.phone) ? D2C.findByPhone(normPhone(m.phone)) : []; })
       .then(function(list){
         m.cloudLinked = (list || []).filter(function(p){ return p.uid !== m.uid; });
@@ -3402,16 +3424,31 @@ function verifyCard(){
     '<p class="onote center">Demo build \u2014 no text is actually sent, any 6 digits work.</p>' +
   '</div>';
 }
-function chooseNameCard(names){
+/* candidates + current picks, set by finishLink before the sheet opens */
+var MERGE = { names: [], photos: [], name: '', photo: '' };
+function mergeCard(){
+  var nameSec = MERGE.names.length > 1
+    ? '<p class="mg-lab">Name</p>' + MERGE.names.map(function(o){
+        return '<button class="modal-cta pick' + (MERGE.name === o.v ? ' on' : '') + '" type="button" ' +
+          'data-mname="' + h(o.v) + '">' + h(o.v) +
+          '<span class="tagn">' + (o.mine ? 'new' : 'existing') + '</span></button>';
+      }).join('')
+    : '';
+  var photoSec = MERGE.photos.length > 1
+    ? '<p class="mg-lab">Photo</p><div class="mg-avs">' + MERGE.photos.map(function(o, i){
+        return '<button class="mg-av' + (MERGE.photo === o.v ? ' on' : '') + '" type="button" ' +
+          'data-mphoto="' + i + '" aria-label="' + (o.mine ? 'Your new photo' : 'Existing photo') + '">' +
+          '<img src="' + h(o.v) + '" alt=""></button>';
+      }).join('') + '</div>'
+    : '';
   return '<div class="modal-card claim">' +
+    '<button class="modal-x" type="button" data-modal-close aria-label="Keep the most recent">' + ico('x') + '</button>' +
     '<div class="modal-ic">' + ico('person') + '</div>' +
-    '<h3 id="modal-h">One name for your accounts</h3>' +
-    '<p>Your linked accounts use different names. Pick the one everyone should see \u2014 it applies to all of them.</p>' +
-    names.map(function(nm, i){
-      return '<button class="modal-cta pick" type="button" data-pickname="' + h(nm) + '">' +
-        h(nm) + (i === 0 ? '<span class="tagn">new</span>' : '<span class="tagn">existing</span>') +
-      '</button>';
-    }).join('') +
+    '<h3 id="modal-h">Make them one</h3>' +
+    '<p>Your linked accounts differ. Pick what everyone should see \u2014 skipping keeps the most recent.</p>' +
+    nameSec + photoSec +
+    '<button class="modal-cta go" type="button" data-mergego>Save</button>' +
+    '<button class="modal-later" type="button" data-modal-close>Skip \u2014 keep most recent</button>' +
   '</div>';
 }
 function renderProfile(){
@@ -3744,15 +3781,14 @@ function eventDock(id){
       saveMe(); closeModal();
       finishLink(); return;
     }
-    var pkn=t.closest('[data-pickname]');
-    if(pkn){
-      var nm=pkn.dataset.pickname;
-      commonizeName(nm); saveMe(); propagateMe();
-      if(STORE.mode==='live' && window.D2C && D2C.renameLinked)
-        D2C.renameLinked(loadMe().cloudLinked||[], nm).catch(function(){});
+    var mnm=t.closest('[data-mname]');
+    if(mnm){ MERGE.name=mnm.dataset.mname; modal.innerHTML=mergeCard(); return; }
+    var mph=t.closest('[data-mphoto]');
+    if(mph){ MERGE.photo=(MERGE.photos[+mph.dataset.mphoto]||{}).v||''; modal.innerHTML=mergeCard(); return; }
+    if(t.closest('[data-mergego]')){
+      applyMerge(MERGE.name, MERGE.photo);
       closeModal();
-      remapRoles(); STORE.notify();
-      toast('Accounts linked as '+fname(nm));
+      toast('Accounts linked as '+fname(loadMe().name||'you'));
       repaintProfile(); return;
     }
     var gsec=t.closest('[data-gsec]');
@@ -4022,21 +4058,47 @@ function eventDock(id){
     promptVerify();
   }
   /* verified: union the views, then settle on one name */
+  /* every linked account ends up with ONE name and ONE photo. The newest is
+     applied immediately, so closing or skipping the sheet already means
+     "keep the most recent" \u2014 the sheet only exists to override that. */
+  function applyMerge(name, photo){
+    if(name) commonizeName(name);
+    if(photo) commonizePhoto(photo);
+    saveMe(); propagateMe();
+    if(STORE.mode==='live' && window.D2C && D2C.renameLinked)
+      D2C.renameLinked(loadMe().cloudLinked||[], loadMe().name, loadMe().photo||'')
+        .catch(function(){});
+    remapRoles(); STORE.notify();
+  }
   function finishLink(){
     var m=loadMe();
-    remapRoles(); STORE.notify();
-    var seen={}, distinct=[];
-    [m.name].concat(linkedProfiles().map(function(p){ return p.name; }))
-      .filter(Boolean).forEach(function(nm){
-        var k=nm.toLowerCase();
-        if(!seen[k]){ seen[k]=1; distinct.push(nm); }
-      });
-    if(distinct.length>1){
-      modal.innerHTML=chooseNameCard(distinct); modal.hidden=false;
+    var seenN={}, seenP={}, names=[], photos=[];
+    var profs=[m].concat(linkedProfiles())
+      .slice().sort(function(a,b){ return (b.at||0)-(a.at||0); });   /* newest first */
+    profs.forEach(function(p){
+      if(p.name && !seenN[p.name.toLowerCase()]){
+        seenN[p.name.toLowerCase()]=1; names.push({ v:p.name, mine:p.uid===m.uid });
+      }
+      if(p.photo && !seenP[p.photo]){
+        seenP[p.photo]=1; photos.push({ v:p.photo, mine:p.uid===m.uid });
+      }
+    });
+    /* accounts with no photo still offer their default face as an option,
+       ranked below every real photo so skipping never discards a real one */
+    profs.forEach(function(p){
+      if(p.photo) return;
+      var d=AV('me-'+p.uid);
+      if(!seenP[d]){ seenP[d]=1; photos.push({ v:d, mine:p.uid===m.uid, def:true }); }
+    });
+    applyMerge(names.length?names[0].v:'',
+               (photos.length && !photos[0].def) ? photos[0].v : '');
+    if(names.length>1 || photos.length>1){
+      MERGE={ names:names, photos:photos,
+              name:names.length?names[0].v:'', photo:photos.length?photos[0].v:'' };
+      modal.innerHTML=mergeCard(); modal.hidden=false;
       document.body.classList.add('modal-open');
     } else {
-      if(distinct.length===1) commonizeName(distinct[0]);
-      saveMe(); toast('Accounts linked'); repaintProfile();
+      toast('Accounts linked'); repaintProfile();
     }
   }
   /* a profile edit shows up everywhere this uid already appears */
@@ -4480,6 +4542,22 @@ function eventDock(id){
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden) syncLinks();
   });
+
+  (function(){
+    var vv=window.visualViewport;
+    if(!vv) return;
+    var raf=0;
+    function apply(){
+      raf=0;
+      var off=window.innerHeight - vv.height - vv.offsetTop;
+      document.documentElement.style.setProperty('--vvb', off.toFixed(1)+'px');
+    }
+    function queue(){ if(!raf) raf=requestAnimationFrame(apply); }
+    vv.addEventListener('resize', queue);
+    vv.addEventListener('scroll', queue);
+    window.addEventListener('resize', queue);
+    apply();
+  })();
 
   window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
   window.addEventListener('resize',function(){ if(!menu.hidden) closeMenu(); });
@@ -4964,18 +5042,21 @@ async function deleteEvent(id){
 }
 
 /* ---------------- one name across linked accounts ---------------- */
-async function renameLinked(profiles, name){
+async function renameLinked(profiles, name, photo){
   const { db, fs } = await initFirebase();
+  const vPatch = photo ? { name, photo } : { name };
+  const gPatch = photo ? { name, avatarUrl: photo } : { name };
   for(const p of profiles){
-    await fs.setDoc(fs.doc(db, ...FS_ROOT, "visitors", p.uid), { name }, { merge: true });
+    await fs.setDoc(fs.doc(db, ...FS_ROOT, "visitors", p.uid), vPatch, { merge: true });
     const evs = await fs.getDocs(fs.query(
       fs.collection(db, ...FS_ROOT, "events"), fs.where("hostUid", "==", p.uid)));
-    await Promise.all(evs.docs.map(d => fs.updateDoc(d.ref, { hostName: name })));
+    const ePatch = photo ? { hostName: name, hostAvatarUrl: photo } : { hostName: name };
+    await Promise.all(evs.docs.map(d => fs.updateDoc(d.ref, ePatch)));
     await Promise.all(Object.keys(p.rsvp || {}).map(id =>
       fs.setDoc(fs.doc(db, ...FS_ROOT, "events", id, "guests", p.uid),
-        { name }, { merge: true }).catch(() => {})));
+        gPatch, { merge: true }).catch(() => {})));
   }
-  ok("name commonized across " + profiles.length + " linked account(s)");
+  ok("profile commonized across " + profiles.length + " linked account(s)");
 }
 
 /* ---------------- a named viewer joins the waiting list ---------------- */
