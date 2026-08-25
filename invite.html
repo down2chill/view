@@ -832,9 +832,12 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .stack2 span{display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--primary)}
 
 .inp.vf{text-align:center;font:700 24px/1 var(--disp);letter-spacing:10px;margin-bottom:16px}
-.modal-cta.pick{margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px}
+.modal-cta.pick{margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:#fff;color:var(--ink);border:1.5px solid var(--line-2);
+  box-shadow:0 2px 10px rgba(30,30,100,.08)}
+.modal-cta.pick:hover{filter:none;border-color:var(--primary);background:#fbfaff}
 .tagn{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
-  background:rgba(255,255,255,.22);padding:3px 8px;border-radius:8px}
+  background:var(--soft);color:var(--primary);padding:3px 8px;border-radius:8px}
 .modal-ic svg.i{width:32px;height:32px}
 .onote.center{text-align:center;margin-top:14px}
 .round-btn.mini{width:42px;height:42px;flex:none}
@@ -4103,9 +4106,12 @@ function eventDock(id){
       var pb=document.querySelector('#rsvp button[data-k="'+pr.k+'"]');
       if(pb) rsvp(pb);
     }
-    /* one soft follow-up: a face and a number, both skippable */
+    /* an adopted number that duplicates an existing account links right away
+       (behind the 2FA-style check); otherwise offer the photo/phone follow-up */
     var m2=loadMe();
-    if(!m2.phone || !m2.photo){
+    if(normPhone(m2.phone) && phoneMatches().length && !phoneVerified()){
+      promptVerify();
+    } else if(!m2.phone || !m2.photo){
       modal.innerHTML=finishCard(); modal.hidden=false;
       document.body.classList.add('modal-open');
     }
@@ -4459,6 +4465,20 @@ function eventDock(id){
     var y=window.scrollY;
     render();
     window.scrollTo(0,y);
+  });
+
+  /* the other device keeps opening events after we linked — pull the fresh
+     union when the app boots and whenever this tab comes back into view */
+  var lastSync=0;
+  function syncLinks(){
+    if(STORE.mode!=='live' || !phoneVerified()) return;
+    var now=Date.now();
+    if(now-lastSync<60000) return;
+    lastSync=now; saveMe();
+  }
+  STORE.onChange(function(){ if(STORE.mode==='live') syncLinks(); });
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden) syncLinks();
   });
 
   window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
