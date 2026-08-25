@@ -30,7 +30,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans
 }
 @supports (-moz-appearance:none){
   @media (pointer:coarse){
-    #shell{bottom:auto;height:100lvh}
+    /* lvh reaches the glass but slightly past the usable edge on Fenix;
+       trimming it restores the same breathing room Chrome shows */
+    #shell{bottom:auto;height:calc(100lvh - 16px)}
   }
 }
 #app{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
