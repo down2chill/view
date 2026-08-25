@@ -25,6 +25,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans
 /* the one and only scroller: a fixed full-viewport pane, so it tracks the
    exact same viewport the fixed bars anchor to */
 #shell{position:fixed;inset:0;overflow:hidden;transform:translateZ(0)}
+@supports (height:100dvh){
+  #shell{bottom:auto;height:100dvh}
+}
 #app{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scroll-behavior:smooth}
 img{display:block;max-width:100%}
@@ -4607,21 +4610,6 @@ function eventDock(id){
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden) syncLinks();
   });
-
-  (function(){
-    var vv=window.visualViewport;
-    if(!vv || !/Android/i.test(navigator.userAgent) || !/Firefox/i.test(navigator.userAgent)) return;
-    var shell=document.getElementById('shell');
-    function fit(){
-      if(vv.scale && vv.scale>1.02) return;      /* leave pinch-zoom alone */
-      shell.style.bottom='auto';
-      shell.style.height=vv.height+'px';
-    }
-    vv.addEventListener('resize',fit);
-    window.addEventListener('resize',fit);
-    window.addEventListener('orientationchange',fit);
-    fit();
-  })();
 
   window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
   window.addEventListener('resize',function(){ if(!menu.hidden) closeMenu(); });
