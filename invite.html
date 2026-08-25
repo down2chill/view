@@ -28,6 +28,11 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 var(--sans
 @supports (height:100dvh){
   #shell{bottom:auto;height:100dvh}
 }
+@supports (-moz-appearance:none){
+  @media (pointer:coarse){
+    #shell{bottom:auto;height:100lvh}
+  }
+}
 #app{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;scroll-behavior:smooth}
 img{display:block;max-width:100%}
@@ -4610,6 +4615,39 @@ function eventDock(id){
   document.addEventListener('visibilitychange',function(){
     if(!document.hidden) syncLinks();
   });
+
+  if(location.hash==='#vpdebug'){
+    (function(){
+      var probe=function(u){
+        var d=document.createElement('div');
+        d.style.cssText='position:absolute;visibility:hidden;height:100'+u;
+        document.body.appendChild(d);
+        var v=Math.round(d.getBoundingClientRect().height); d.remove(); return v;
+      };
+      var mark=function(parent,color){
+        var d=document.createElement('div');
+        d.style.cssText='position:fixed;left:0;right:0;bottom:0;height:5px;background:'+color+';z-index:998';
+        parent.appendChild(d);
+      };
+      mark(document.body,'red');                             /* browser fixed viewport */
+      mark(document.getElementById('shell'),'lime');         /* shell bottom */
+      var dbg=document.createElement('div');
+      dbg.style.cssText='position:fixed;top:70px;left:8px;z-index:999;background:rgba(0,0,0,.82);'+
+        'color:#7CFC00;font:12px/1.6 monospace;padding:10px 12px;border-radius:10px;white-space:pre';
+      document.body.appendChild(dbg);
+      function upd(){
+        var vv=window.visualViewport;
+        dbg.textContent=
+          'innerH  '+window.innerHeight+
+          '\nclientH '+document.documentElement.clientHeight+
+          '\nvv.h    '+(vv?vv.height.toFixed(1):'n/a')+'  off '+(vv?vv.offsetTop:'-')+
+          '\nsvh '+probe('svh')+'  dvh '+probe('dvh')+'  lvh '+probe('lvh')+
+          '\nscreen  '+screen.height+'  avail '+screen.availHeight+
+          '\nshellH  '+Math.round(document.getElementById('shell').getBoundingClientRect().height);
+      }
+      upd(); setInterval(upd,800);
+    })();
+  }
 
   window.addEventListener('scroll',function(){ if(!menu.hidden) closeMenu(); },true);
   window.addEventListener('resize',function(){ if(!menu.hidden) closeMenu(); });
