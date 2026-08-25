@@ -851,6 +851,14 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .mg-av.on{border-color:var(--primary)}
 .mg-av.on::after{content:"";position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;
   border-radius:50%;background:var(--primary);border:3px solid #fff}
+.mg-av.up{display:grid;place-items:center;border-style:dashed;border-color:#c9c2f4;
+  background:#fbfaff;color:var(--primary)}
+.mg-av.up:hover{border-color:var(--primary)}
+.mg-av.up svg.i{width:26px;height:26px;stroke-width:1.7}
+.claim-row.off{opacity:.55;cursor:default}
+.claim-row.off:hover{background:none}
+.claim-row .tk{margin-left:auto;flex:none;font-size:10.5px;font-weight:700;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);background:var(--soft);padding:4px 9px;border-radius:8px}
 .modal-cta.go{margin-top:16px}
 .modal-ic svg.i{width:32px;height:32px}
 .onote.center{text-align:center;margin-top:14px}
@@ -3364,8 +3372,29 @@ function claimList(ev){
         : (ev.guestPreview || []).filter(function(g){ return !g.isHost; });
   return l.slice(0, 12);
 }
+/* names already claimed by some OTHER visitor \u2014 from streamed guest rows
+   (live) and from every registry profile's claims map (local) */
+function takenNames(ev){
+  var m = loadMe(), out = {};
+  [].concat(ev.guests || [], ev.maybes || [], ev.cants || [], ev.waiting || [])
+    .forEach(function(g){
+      if(g.uid && /^u-/.test(g.uid) && g.uid !== m.uid && g.name) out[g.name.toLowerCase()] = 1;
+    });
+  var reg = regAll(), k;
+  for(k in reg){
+    if(k === m.uid) continue;
+    var c = reg[k].claims || {};
+    var nm = c[ev.id] || (ev.slug && c[ev.slug]);
+    if(nm) out[nm.toLowerCase()] = 1;
+  }
+  return out;
+}
 function claimCard(ev){
+  var taken = takenNames(ev);
   var rows = claimList(ev).map(function(g){
+    if(taken[g.name.toLowerCase()])
+      return '<div class="claim-row off"><img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
+        '<b>' + h(g.name) + '</b><span class="tk">Taken</span></div>';
     return '<button class="claim-row" type="button" data-claim="' + h(g.name) + '">' +
       '<img src="' + h(g.avatarUrl || AV('cg-' + g.name)) + '" alt="">' +
       '<b>' + h(g.name) + '</b>' + (g.phone ? '<span>' + h(g.phone) + '</span>' : '') +
@@ -3434,12 +3463,15 @@ function mergeCard(){
           '<span class="tagn">' + (o.mine ? 'new' : 'existing') + '</span></button>';
       }).join('')
     : '';
-  var photoSec = MERGE.photos.length > 1
+  var photoSec = MERGE.photos.length
     ? '<p class="mg-lab">Photo</p><div class="mg-avs">' + MERGE.photos.map(function(o, i){
         return '<button class="mg-av' + (MERGE.photo === o.v ? ' on' : '') + '" type="button" ' +
-          'data-mphoto="' + i + '" aria-label="' + (o.mine ? 'Your new photo' : 'Existing photo') + '">' +
+          'data-mphoto="' + i + '" aria-label="' + (o.mine ? 'Your photo' : 'Existing photo') + '">' +
           '<img src="' + h(o.v) + '" alt=""></button>';
-      }).join('') + '</div>'
+      }).join('') +
+      '<button class="mg-av up" type="button" data-mupload aria-label="Upload a new photo">' +
+        ico('cam-plus') + '</button>' +
+      '</div>'
     : '';
   return '<div class="modal-card claim">' +
     '<button class="modal-x" type="button" data-modal-close aria-label="Keep the most recent">' + ico('x') + '</button>' +
@@ -3785,6 +3817,7 @@ function eventDock(id){
     if(mnm){ MERGE.name=mnm.dataset.mname; modal.innerHTML=mergeCard(); return; }
     var mph=t.closest('[data-mphoto]');
     if(mph){ MERGE.photo=(MERGE.photos[+mph.dataset.mphoto]||{}).v||''; modal.innerHTML=mergeCard(); return; }
+    if(t.closest('[data-mupload]')){ pickMergePhoto(); return; }
     if(t.closest('[data-mergego]')){
       applyMerge(MERGE.name, MERGE.photo);
       closeModal();
@@ -4133,6 +4166,25 @@ function eventDock(id){
     input.click();
   }
 
+  /* a brand-new photo, straight from the merge sheet */
+  function pickMergePhoto(){
+    var input=document.getElementById('face-input');
+    input.value='';
+    input.onchange=function(){
+      var f=input.files&&input.files[0];
+      if(!f) return;
+      if(!/^image\//.test(f.type)){ toast('That file isn\u2019t an image.','err'); return; }
+      shrinkImage(f,192,function(url){
+        if(!url){ toast('Could not read that image.','err'); return; }
+        MERGE.photos=MERGE.photos.filter(function(p){ return !p.up; });
+        MERGE.photos.unshift({ v:url, mine:true, up:true });
+        MERGE.photo=url;
+        modal.innerHTML=mergeCard();
+      });
+    };
+    input.click();
+  }
+
   /* ---------- claiming a spot on a public event ---------- */
   var claimShown={}, pendingRsvp=null, pendingName=null;
   function maybeClaim(id){
@@ -4148,6 +4200,10 @@ function eventDock(id){
   }
   function doClaim(name, custom){
     var id=route().id, m=loadMe(), ev=findEvent(id);
+    if(ev && takenNames(ev)[name.toLowerCase()]){
+      toast('Sorry \u2014 '+fname(name)+' is already taken here. Pick another name.','err',4500);
+      return;
+    }
     m.claims[id]=name;
     if(custom || !m.name) m.name=name;
     if(!custom && ev){
@@ -5181,7 +5237,7 @@ async function watchDetail(id){
 function mapGuest(g){
   return { name: g.name || "Guest", avatarUrl: g.avatarUrl || "", message: g.message || "",
            invitedLabel: g.invitedLabel || "", isHost: !!g.isHost, isYou: !!g.isYou,
-           status: g.status || "going" };
+           status: g.status || "going", uid: g.uid || "", source: g.source || "" };
 }
 
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
