@@ -820,6 +820,10 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .cbanner{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--card);
   border:1px solid var(--line-2);border-radius:var(--r-md);box-shadow:0 1px 2px rgba(20,20,80,.05)}
 .cbanner .gic{background:#EDEBFE;color:#5B46E8}
+.cbanner .alt{display:block;margin-top:7px;padding:0;font-size:13px;font-weight:700;
+  color:var(--primary);text-align:left;transition:opacity .18s}
+.cbanner .alt:hover{opacity:.72}
+.ghead button+button{margin-left:14px}
 .cbanner .gtx>span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.45}
 .cbanner button{flex:none;height:44px;padding:0 18px;border-radius:14px;background:var(--primary);color:#fff;
   font-size:clamp(14px,3.8vw,15px);font-weight:700;transition:filter .18s}
@@ -1130,6 +1134,7 @@ button.view-all{display:block;width:100%;text-align:center}
 <main id="app"></main>
 <div id="chrome"></div>
 <input type="file" id="photo-input" accept="image/*" hidden>
+<input type="file" id="vcf-input" accept=".vcf,text/vcard,text/x-vcard,text/directory" hidden>
 <input type="file" id="face-input" accept="image/*" hidden>
 <input type="file" id="cover-input" accept="image/*" hidden>
 <div id="toast" class="toast" hidden></div>
@@ -2998,6 +3003,60 @@ function pickFace(id){
 
 var inviteQ = '', inviteGroup = 'all';
 
+/* ---- .vcf import: works in every browser, and brings ALL contacts at once.
+   Android vCard 2.1 quotes non-ASCII names as QUOTED-PRINTABLE UTF-8. ---- */
+function qpDecode(v){
+  try{
+    var bytes = [];
+    String(v).replace(/=([0-9A-F]{2})|([\s\S])/gi, function(_, hx, ch){
+      if(hx) bytes.push(parseInt(hx, 16));
+      else if(ch) bytes.push(ch.charCodeAt(0) & 255);
+      return '';
+    });
+    return new TextDecoder('utf-8').decode(new Uint8Array(bytes));
+  }catch(e){ return v; }
+}
+function parseVCF(text){
+  var out = [];
+  text = String(text).replace(/\r/g, '').replace(/\n[ \t]/g, '');   /* unfold */
+  text.split(/BEGIN:VCARD/i).forEach(function(card){
+    if(!/END:VCARD/i.test(card)) return;
+    var fn = '', nName = '', tel = '';
+    card.split('\n').forEach(function(ln){
+      var ix = ln.indexOf(':');
+      if(ix < 0) return;
+      var key = ln.slice(0, ix).toUpperCase(), val = ln.slice(ix + 1).trim();
+      if(key.indexOf('QUOTED-PRINTABLE') > -1) val = qpDecode(val);
+      if(key === 'FN' || key.indexOf('FN;') === 0){ if(!fn) fn = val; }
+      else if(key === 'N' || key.indexOf('N;') === 0){ if(!nName) nName = val; }
+      else if(key.indexOf('TEL') === 0){ if(!tel) tel = val; }
+    });
+    if(!fn && nName) fn = nName.split(';').filter(Boolean).reverse().join(' ').trim();
+    fn = fn.trim();
+    if(fn) out.push({ name: fn, phone: tel.trim() });
+  });
+  return out;
+}
+function importVcf(file){
+  var r = new FileReader();
+  r.onload = function(){
+    var people = parseVCF(r.result), seen = {}, list = [];
+    people.forEach(function(p){
+      var id = 'c-' + slugId(p.name + '|' + p.phone);
+      if(seen[id]) return;
+      seen[id] = 1;
+      list.push({ id: id, name: p.name, phone: p.phone, photo: '', src: 'contact' });
+    });
+    if(!list.length){ toast('No contacts found in that file', 'err', 4000); return; }
+    CONTACTS = list;
+    inviteQ = ''; inviteGroup = 'all';
+    toast(list.length + (list.length === 1 ? ' contact imported' : ' contacts imported'));
+    repaintInvites();
+  };
+  r.onerror = function(){ toast('Could not read that file', 'err'); };
+  r.readAsText(file);
+}
+
 function guestPool(){
   return SEED_PEOPLE.filter(function(p){ return p.id !== 'emily'; });
 }
@@ -3107,13 +3166,15 @@ function inviteBody(){
     '</section>' +
 
     (live ? '' :
-    '<section class="full"><div class="cbanner' + (contactsReady() ? '' : ' off') + '">' +
+    '<section class="full"><div class="cbanner">' +
       '<span class="gic">' + ico('person') + '</span>' +
       '<span class="gtx"><b>Use your contacts</b><span>' +
         (contactsReady()
-          ? 'Pick people straight from your phone\u2019s address book.'
-          : 'Not available in this browser — add anyone by name below.') +
-      '</span></span>' +
+          ? 'Pick from your phone\u2019s address book, or import a saved contacts file.'
+          : 'This browser has no contact picker \u2014 in your Contacts app choose Share \u2192 vCard, then import the file here.') +
+      '</span>' +
+      '<button class="alt" type="button" data-vcf>Import a contacts file (.vcf)</button>' +
+      '</span>' +
       (contactsReady() ? '<button type="button" data-contacts>Allow</button>' : '') +
     '</div></section>') +
 
@@ -3130,6 +3191,9 @@ function inviteBody(){
     '<section class="full"><div class="ghead">' +
       '<h3>' + h(live ? 'From your contacts (' + CONTACTS.length + ')'
                       : inviteGroup === 'all' ? 'Suggested' : groupName(inviteGroup)) + '</h3>' +
+      (live ? '<button type="button" data-callall>' +
+          (CONTACTS.every(function(c){ return extraAt(d, c.id) > -1; })
+            ? 'Remove all' : 'Add all (' + CONTACTS.length + ')') + '</button>' : '') +
       (n ? '<button type="button" data-gclear>Clear (' + n + ')</button>' : '') +
     '</div>' +
     '<div class="glist" id="g-list">' + inviteList() + '</div></section>' +
@@ -3802,6 +3866,26 @@ function eventDock(id){
       saveDraft(); repaintStep4(); return;
     }
     if(t.closest('[data-contacts]')){ importContacts(); return; }
+    if(t.closest('[data-vcf]')){
+      var vfi=document.getElementById('vcf-input');
+      vfi.value='';
+      vfi.onchange=function(){ var f=vfi.files&&vfi.files[0]; if(f) importVcf(f); };
+      vfi.click(); return;
+    }
+    if(t.closest('[data-callall]')){
+      var cad=loadDraft(),
+          cAll=CONTACTS.every(function(c){ return extraAt(cad,c.id)>-1; });
+      if(cAll){
+        cad.extra=cad.extra.filter(function(e){
+          return !CONTACTS.some(function(c){ return c.id===e.id; }); });
+      } else {
+        CONTACTS.forEach(function(c){
+          if(extraAt(cad,c.id)<0)
+            cad.extra.push({ id:c.id, name:c.name, phone:c.phone, photo:'', src:'contact' });
+        });
+      }
+      saveDraft(); repaintStep4(); return;
+    }
     if(t.closest('[data-addguest]')){ commitAdd(true); return; }
 
     var face=t.closest('[data-face]');
