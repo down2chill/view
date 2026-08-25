@@ -241,6 +241,14 @@ h2{font:700 clamp(21px,5.4vw,24px)/1.2 var(--disp);letter-spacing:-.02em;margin:
 .tally{text-align:center;margin:20px 0 0;font-size:16px;color:var(--ink-soft)}
 .tally b{color:var(--primary);font-weight:700}
 .tally i{font-style:normal;color:var(--muted-2);padding:0 6px}
+.plusrow{display:flex;align-items:center;justify-content:center;gap:12px;margin:14px 0 0}
+.plusrow span{font-size:14.5px;font-weight:600;color:var(--ink-soft)}
+.plusrow button{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;
+  background:#fbfbfe;border:1px solid var(--line-2);color:var(--primary);transition:border-color .16s}
+.plusrow button:hover{border-color:#c9c5f2}
+.plusrow button:disabled{opacity:.35;cursor:default}
+.plusrow button svg.i{width:16px;height:16px;stroke-width:2.4}
+.plusrow b{font:700 16px/1 var(--disp);min-width:32px;text-align:center;color:var(--primary)}
 .note{text-align:center;color:var(--muted);font-size:14.5px;margin:8px 0 0}
 .about{margin:0;font-size:16.5px;line-height:1.62;color:var(--ink-soft)}
 .chips{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:22px}
@@ -1440,6 +1448,7 @@ function loadMe(){
   if(!ME.claims || typeof ME.claims !== 'object') ME.claims = {};
   if(!ME.rsvp || typeof ME.rsvp !== 'object') ME.rsvp = {};
   if(typeof ME.verifiedPhone !== 'string') ME.verifiedPhone = '';
+  if(!ME.plus || typeof ME.plus !== 'object') ME.plus = {};
   return ME;
 }
 function meAvatar(){ var m = loadMe(); return m.photo || AV('me-' + m.uid); }
@@ -1500,6 +1509,10 @@ function myUids(){
   return out;
 }
 /* my answer for an event \u2014 mine first, then anything a linked uid said */
+function myPlus(id){
+  var m = loadMe();
+  return m.plus[id] || 0;
+}
 function myRsvp(id){
   var m = loadMe();
   if(m.rsvp[id]) return m.rsvp[id];
@@ -1511,7 +1524,7 @@ function saveMe(){
   var m = loadMe(), reg = regAll();
   m.at = Date.now();
   reg[m.uid] = { uid: m.uid, name: m.name, phone: m.phone, photo: m.photo, at: m.at,
-                 events: m.events, claims: m.claims, rsvp: m.rsvp };
+                 events: m.events, claims: m.claims, rsvp: m.rsvp, plus: m.plus };
   m.linked = linkedProfiles().map(function(p){ return p.uid; });
   try{
     localStorage.setItem(ME_KEY, JSON.stringify(m));
@@ -1519,7 +1532,8 @@ function saveMe(){
   }catch(e){}
   if(STORE.mode === 'live' && window.D2C && D2C.saveProfile){
     D2C.saveProfile({ uid: m.uid, name: m.name, phone: normPhone(m.phone),
-                      photo: m.photo || '', at: m.at, events: m.events, claims: m.claims, rsvp: m.rsvp })
+                      photo: m.photo || '', at: m.at, events: m.events, claims: m.claims,
+                      rsvp: m.rsvp, plus: m.plus })
       .then(function(){ return normPhone(m.phone) ? D2C.findByPhone(normPhone(m.phone)) : []; })
       .then(function(list){
         m.cloudLinked = (list || []).filter(function(p){ return p.uid !== m.uid; });
@@ -1529,6 +1543,7 @@ function saveMe(){
             var k;
             for(k in (p.rsvp || {}))   if(!m.rsvp[k])   m.rsvp[k]   = p.rsvp[k];
             for(k in (p.claims || {})) if(!m.claims[k]) m.claims[k] = p.claims[k];
+            for(k in (p.plus || {}))   if(!m.plus[k])   m.plus[k]   = p.plus[k];
           });
           remapRoles(); STORE.notify();
         }
@@ -2009,6 +2024,7 @@ function renderEvent(id){
         '<p class="tally"><b id="c-going">'+c.going+'</b> Going <i>\u00B7</i> <b id="c-maybe">'+c.maybe+
           '</b> Maybe <i>\u00B7</i> <b id="c-cant">'+c.cant+'</b> Can\u2019t Go</p>'+
         '<p class="note">You can update your RSVP anytime.</p>'+
+        '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
       '</section>'+
       '<section class="sec"><div class="sec-h"><h2>About</h2></div>'+
         '<p class="about">'+h(ev.about)+'</p>'+
@@ -2087,7 +2103,8 @@ function guestBuckets(ev){
     });
     var meRow = { name: myName, avatarUrl: meAvatar(), message: '',
                   invitedLabel: my ? 'Responded' : 'Viewing this event',
-                  isHost: false, isYou: true, status: my || 'pending' };
+                  isHost: false, isYou: true, status: my || 'pending',
+                  plus: myPlus(ev.id) };
     /* you always see yourself first in your section */
     if(my === 'going') b.going.unshift(meRow);
     else if(my === 'maybe') b.maybe.unshift(meRow);
@@ -2113,7 +2130,8 @@ function renderGuests(id){
   function goingRow(g){
     return '<div class="g-row"><span class="g-av on">'+img(g.avatarUrl,'')+'</span>'+
       '<div class="g-txt"><div class="g-name"><b>'+h(g.name)+'</b>'+
-        (g.isHost?'<span class="tag">Host</span>':'')+'</div>'+
+        (g.isHost?'<span class="tag">Host</span>':'')+
+        (g.plus?'<span class="tag">+'+g.plus+'</span>':'')+'</div>'+
         (g.message?'<p>'+h(g.message)+'</p>':'')+'<small>'+h(g.invitedLabel)+'</small></div>'+
       '<span class="g-end">'+(g.isYou?'<em>You</em>':'')+ico('chev')+'</span></div>';
   }
@@ -3380,6 +3398,27 @@ function createLocalEvent(d){
 }
 
 /* ================= PROFILE & THE CLAIM SHEET ================= */
+/* how many extra people this event lets one guest bring */
+function plusMaxOf(ev){
+  if(ev.plusOnesMax > 0) return ev.plusOnesMax;
+  var p = String(ev.plusOnes || '');
+  if(/^allowed$/i.test(p) || /one plus/i.test(p)) return 1;
+  var m = p.match(/^\+(\d+)/);
+  return m ? +m[1] : 0;
+}
+function plusRowInner(ev){
+  var my = myRsvp(ev.id);
+  if(my !== 'going' && my !== 'maybe') return '';
+  var max = plusMaxOf(ev);
+  if(!max) return '';
+  var k = Math.min(myPlus(ev.id), max);
+  return '<div class="plusrow"><span>Bringing anyone?</span>' +
+    '<button type="button" data-plusadj="-1" aria-label="Fewer"' + (k <= 0 ? ' disabled' : '') + '>' +
+      ico('minus') + '</button>' +
+    '<b>+' + k + '</b>' +
+    '<button type="button" data-plusadj="1" aria-label="More"' + (k >= max ? ' disabled' : '') + '>' +
+      ico('plus') + '</button></div>';
+}
 function isPublicEvent(ev){
   return ev.visibilityMode === 'public' || /public/i.test(ev.visibility || '') ||
          ev.inviteType === 'Public Link';
@@ -3814,6 +3853,18 @@ function eventDock(id){
       saveMe(); propagateMe(); toast('Profile saved'); repaintProfile();
       checkPhoneLink(); return;
     }
+    var padj=t.closest('[data-plusadj]');
+    if(padj && !padj.disabled){
+      var pid=route().id, pev=findEvent(pid), pm=loadMe();
+      var pmax=pev?plusMaxOf(pev):0;
+      var pn=Math.max(0, Math.min(pmax, (pm.plus[pid]||0) + (+padj.dataset.plusadj)));
+      pm.plus[pid]=pn; saveMe();
+      if(STORE.mode==='live' && window.D2C && D2C.setPlus)
+        D2C.setPlus(pid, pn).catch(function(){});
+      var ps=document.getElementById('plus-slot');
+      if(ps && pev) ps.innerHTML=plusRowInner(pev);
+      return;
+    }
     var clm=t.closest('[data-claim]');
     if(clm){ doClaim(clm.dataset.claim, false); return; }
     if(t.closest('[data-claim-go]')){
@@ -4220,6 +4271,9 @@ function eventDock(id){
   var claimShown={}, pendingRsvp=null, pendingName=null;
   function maybeClaim(id){
     var ev=findEvent(id); if(!ev) return;
+    /* wait for the guests stream — opening against the pre-stream snapshot
+       flashed names that were already claimed */
+    if(ev.guests == null) return;
     var m=loadMe();
     /* remember that this uid opened this event, whoever they turn out to be */
     if(m.events.indexOf(ev.id)<0){ m.events.push(ev.id); saveMe(); }
@@ -4470,6 +4524,8 @@ function eventDock(id){
     saveMe();
     var ev=findEvent(id);
     if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant};
+    var pslot=document.getElementById('plus-slot');
+    if(pslot && ev) pslot.innerHTML=plusRowInner(ev);
     if(STORE.mode==='live' && window.D2C && D2C.setRsvp){
       D2C.setRsvp(id, k, prev).catch(function(e){
         toast((e&&e.message)||'Could not save your RSVP','err',4500);
@@ -5163,6 +5219,14 @@ async function renameLinked(profiles, name, photo){
   ok("profile commonized across " + profiles.length + " linked account(s)");
 }
 
+/* ---------------- how many extras a guest brings ---------------- */
+async function setPlus(eventId, n){
+  const { db, fs } = await initFirebase();
+  const me = meIdent();
+  await fs.setDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", me.fsId || "anon"),
+    { plus: n }, { merge: true });
+}
+
 /* ---------------- a named viewer joins the waiting list ---------------- */
 async function announceGuest(eventId){
   const { db, fs } = await initFirebase();
@@ -5198,7 +5262,8 @@ async function setRsvp(eventId, status, prev){
   await fs.setDoc(fs.doc(evRef, "guests", me.fsId || "anon"), {
     uid: me.fsId, name: me.name, avatarUrl: me.av, message: "",
     invitedLabel: "Responded just now", isHost: false, isYou: false,
-    status: status, order: Date.now(), source: "rsvp"
+    status: status, order: Date.now(), source: "rsvp",
+    plus: (window.loadMe && loadMe().plus[eventId]) || 0
   }, { merge: true });
   const inc = {};
   inc["counts." + status] = fs.increment(1);
@@ -5285,7 +5350,8 @@ async function watchDetail(id){
 function mapGuest(g){
   return { name: g.name || "Guest", avatarUrl: g.avatarUrl || "", message: g.message || "",
            invitedLabel: g.invitedLabel || "", isHost: !!g.isHost, isYou: !!g.isYou,
-           status: g.status || "going", uid: g.uid || "", source: g.source || "" };
+           status: g.status || "going", uid: g.uid || "", source: g.source || "",
+           plus: g.plus || 0 };
 }
 
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
@@ -5303,7 +5369,7 @@ async function sendMessage(eventId, text){
 
 window.D2C = {
   pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
-  saveProfile, findByPhone, setRsvp, propagateProfile, announceGuest, renameLinked,
+  saveProfile, findByPhone, setRsvp, setPlus, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
