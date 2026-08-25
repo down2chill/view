@@ -831,6 +831,15 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .stack2 img{object-fit:cover}
 .stack2 span{display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--primary)}
 
+.round-btn.mini{width:42px;height:42px;flex:none}
+.fin-av{position:relative;width:96px;height:96px;margin:0 auto 16px}
+.fin-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:var(--soft)}
+.fin-av .cam{position:absolute;right:-3px;bottom:0;display:grid;place-items:center;width:32px;height:32px;
+  border-radius:50%;background:var(--primary);color:#fff;border:3px solid var(--card);transition:filter .18s}
+.fin-av .cam:hover{filter:brightness(1.1)}
+.fin-av .cam svg.i{width:16px;height:16px}
+.modal-card .inp{margin-bottom:16px;text-align:center}
+button.view-all{display:block;width:100%;text-align:center}
 /* ---- profile & claim ---- */
 .me-card{display:flex;gap:26px;align-items:flex-start;background:var(--card);border:1px solid var(--line);
   border-radius:var(--r-lg);padding:26px;box-shadow:0 1px 2px rgba(20,20,80,.05)}
@@ -1524,7 +1533,7 @@ function docToModel(id, d){
        free and need no extra listener. */
     messages: (d.chatMessages || []).map(msgFrom),
     chatUnread: d.chatUnread || 0,
-    guests: null, waiting: null, photos: null, activity: null
+    guests: null, waiting: null, maybes: null, cants: null, photos: null, activity: null
   };
 }
 
@@ -1547,7 +1556,7 @@ function seedToModel(ev){
                text: m.text, at: new Date(Date.now() - m.minsAgo*60000).toISOString(),
                isYou: m.from === "emily" }; }),
     chatUnread: ev.chat.unread || 0,
-    guests: null, waiting: null, photos: null, activity: null,
+    guests: null, waiting: null, maybes: null, cants: null, photos: null, activity: null,
     _seed: ev
   };
 }
@@ -1562,6 +1571,7 @@ function seedDetail(ev){
     waiting: s.waiting.map(function(g){
       return { name: pn(g.id), avatarUrl: pav(g.id), message: "",
                invitedLabel: g.when, isHost: false, isYou: false, status: "pending" }; }),
+    maybes: [], cants: [],
     photos: s.allPhotos.map(function(p){
       return { url: IMG(p.seed, 1400, 1400), thumbUrl: IMG(p.seed, 600, 600),
                byName: pn(p.byId), byAvatarUrl: pav(p.byId), whenLabel: p.when }; }),
@@ -1661,6 +1671,10 @@ function mapsUrl(ev){
 function skel(msg){ return '<p class="skel">'+h(msg||'Loading\u2026')+'</p>'; }
 /* one wordmark, used by the home header and by every subpage's back row */
 function brandMark(){ return '<span class="logo">DOWN<i>2</i>CHILL<b>\u2726</b></span>'; }
+function profBtn(){
+  return '<a class="round-btn mini" href="#profile" data-nav aria-label="Your profile">'+
+    '<img class="me-mini" src="'+h(meAvatar())+'" alt=""></a>';
+}
 
 function statusPill(ev){
   if(ev.dateISO<TODAY) return '<span class="pill went">'+(ev.role==='hosting'?'Hosted':'Went')+'</span>';
@@ -1890,6 +1904,7 @@ function renderEvent(id){
         '" aria-label="Share event">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" data-evmenu="'+ev.id+'" aria-haspopup="true" '+
         'aria-expanded="false" aria-label="More options">'+ico('more')+'</button>'+
+      profBtn()+
     '</header>'+
     '<h1 class="title">'+h(ev.title)+'</h1>'+
     '<div class="grid"><div class="colA">'+
@@ -1967,9 +1982,51 @@ function renderEvent(id){
 }
 
 /* ================= GUESTS ================= */
+var guestsOpen = {};
+
+/* The four lists a guests page shows. Names are the join key: when someone
+   claims a curated invite and answers, their own row replaces the host-typed
+   pending row instead of sitting next to it.                                */
+function guestBuckets(ev){
+  var m = loadMe(), my = myRsvp(ev.id), myName = m.name || m.claims[ev.id] || '';
+  var b = { going: (ev.guests || []).slice(), maybe: (ev.maybes || []).slice(),
+            cant: (ev.cants || []).slice(), waiting: (ev.waiting || []).slice() };
+  var mine = function(g){
+    return (myName && g.name.toLowerCase() === myName.toLowerCase()) || g.isYou;
+  };
+  /* local mode: my claim / answer only lives on this device, so fold it in.
+     Live mode streams my own guests/{uid} doc, so only mark it as me. */
+  if(STORE.mode === 'live'){
+    ['going','maybe','cant','waiting'].forEach(function(k){
+      b[k].forEach(function(g){ if(g.uid === m.uid || mine(g)) g.isYou = true; });
+    });
+  } else if(myName && ev.role !== 'hosting'){
+    ['going','maybe','cant','waiting'].forEach(function(k){
+      b[k] = b[k].filter(function(g){ return !mine(g); });
+    });
+    var meRow = { name: myName, avatarUrl: meAvatar(), message: '',
+                  invitedLabel: my ? 'Responded' : 'Viewing this event',
+                  isHost: false, isYou: true, status: my || 'pending' };
+    /* you always see yourself first in your section */
+    if(my === 'going') b.going.unshift(meRow);
+    else if(my === 'maybe') b.maybe.unshift(meRow);
+    else if(my === 'cant') b.cant.unshift(meRow);
+    else if(m.claims[ev.id] || myEvents().indexOf(ev.id) > -1) b.waiting.unshift(meRow);
+  }
+  /* anyone who answered no longer waits under the same name */
+  var responded = {};
+  b.going.concat(b.maybe).concat(b.cant).forEach(function(g){
+    responded[g.name.toLowerCase()] = 1;
+  });
+  b.waiting = b.waiting.filter(function(g){ return !responded[g.name.toLowerCase()]; });
+  return b;
+}
 function renderGuests(id){
   var ev=findEvent(id); if(!ev) return renderHome();
-  var c=ev.counts, responses=c.going+c.maybe+c.cant, invites=responses+c.pending;
+  var b=ev.guests?guestBuckets(ev):null;
+  var c=b?{going:b.going.length, maybe:b.maybe.length, cant:b.cant.length, pending:b.waiting.length}
+       :ev.counts;
+  var responses=c.going+c.maybe+c.cant, invites=responses+c.pending;
   var pct=invites?Math.round(responses/invites*100):0;
 
   function goingRow(g){
@@ -1987,15 +2044,23 @@ function renderGuests(id){
       'aria-label="Options for '+h(g.name)+'">'+ico('more')+'</button></span></div>';
   }
 
-  var lists = ev.guests
-    ? '<section class="lcard"><h2>Going ('+c.going+')</h2>'+
-        (ev.guests.length ? ev.guests.map(goingRow).join('') : '<p class="skel">No one yet.</p>')+
-        '<a class="view-all" href="#">View All ('+c.going+')</a></section>'+
-      ((ev.waiting&&ev.waiting.length)?
-        '<section class="lcard"><h2>Waiting for RSVP ('+c.pending+')</h2>'+
-        '<p class="sub">Invited but haven\u2019t responded yet.</p>'+
-        ev.waiting.map(waitRow).join('')+
-        '<a class="view-all" href="#">View All ('+c.pending+')</a></section>':'')
+  function section(key, label, rows, rowFn, sub){
+    var open = !!guestsOpen[key], show = open ? rows : rows.slice(0, 3);
+    return '<section class="lcard"><h2>'+label+' ('+rows.length+')</h2>'+
+      (sub ? '<p class="sub">'+sub+'</p>' : '')+
+      (rows.length ? show.map(rowFn).join('') : '<p class="skel">No one yet.</p>')+
+      (rows.length > 3
+        ? '<button class="view-all" type="button" data-gsec="'+key+'">'+
+            (open ? 'Show less' : 'View all ('+rows.length+')')+'</button>'
+        : '')+
+    '</section>';
+  }
+  var lists = b
+    ? section('going', 'Going', b.going, goingRow)+
+      section('maybe', 'Maybe', b.maybe, goingRow)+
+      section('cant', 'Can\u2019t Go', b.cant, goingRow)+
+      section('wait', 'Waiting for RSVP', b.waiting, waitRow,
+        'Invited or viewing, but haven\u2019t answered yet.')
     : '<section class="lcard">'+skel('Loading guest list\u2026')+'</section>';
 
   return '<div class="wrap">'+
@@ -2006,6 +2071,7 @@ function renderGuests(id){
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
+      profBtn()+
     '</header>'+
     '<h1 class="title">Guests</h1>'+
     '<div class="stats"><div class="stat-grid">'+
@@ -2019,8 +2085,6 @@ function renderGuests(id){
     '<p>'+invites+' invitations &nbsp;\u00B7&nbsp; '+responses+' responses</p></div>'+
     '<button class="cta" type="button">'+ico('user-plus')+'Invite More Friends</button>'+
     lists+
-    '<button class="seg" type="button">Maybe ('+c.maybe+')'+ico('chev')+'</button>'+
-    '<button class="seg" type="button">Can\u2019t Go ('+c.cant+')'+ico('chev')+'</button>'+
     '<section class="slink"><div class="slink-top"><div><h2>Share Event Link</h2>'+
       '<p>Anyone with the link can request an invitation.</p></div>'+
       '<button class="ghost" type="button" data-share-kind="event" data-share-id="'+ev.id+'">'+
@@ -2050,6 +2114,7 @@ function renderPhotos(id){
       '<button class="icon-btn" type="button" data-share-kind="album" data-share-id="'+ev.id+
         '" aria-label="Share album">'+ico('share')+'</button>'+
       '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
+      profBtn()+
     '</header>'+
     '<h1 class="title">Photos</h1>'+
     '<p class="pmeta">'+(ev.photos?ev.photos.length:ev.photoCount)+' photos from '+h(ev.title)+
@@ -2096,6 +2161,7 @@ function renderChat(id){
       brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
+      profBtn()+
     '</header>'+
     '<h1 class="title">Chat</h1>'+
     '<p class="chat-sub">'+h(ev.title)+' \u00B7 '+msgs.length+' message'+(msgs.length===1?'':'s')+'</p>'+
@@ -2120,7 +2186,7 @@ function renderDebug(){
   return '<div class="wrap">'+
     '<header class="top">'+
       '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">'+ico('back')+'</a>'+
-      brandMark()+'<div class="sp"></div>'+
+      brandMark()+'<div class="sp"></div>'+profBtn()+
     '</header>'+
     '<h1 class="title">Firebase Debug</h1>'+
 
@@ -3224,6 +3290,7 @@ function createLocalEvent(d){
     return { name: g.name, avatarUrl: g.avatarUrl, message: '',
              invitedLabel: 'Just now', isHost: false, isYou: false, status: 'pending' };
   });
+  ev.maybes = []; ev.cants = [];
   ev.photos = [];
   ev.activity = [{ personName: me.name, personAvatarUrl: me.av, icon: 'check',
                    isCheck: true, text: 'created this event', whenLabel: 'Just now', quote: false }];
@@ -3271,6 +3338,20 @@ function nameCard(){
       '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
       '<button class="addbtn" type="button" data-name-go>' + ico('arr') + 'Continue</button>' +
     '</div>' +
+  '</div>';
+}
+function finishCard(){
+  var m = loadMe();
+  return '<div class="modal-card claim">' +
+    '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
+    '<div class="fin-av"><img src="' + h(meAvatar()) + '" alt="">' +
+      '<button class="cam" type="button" data-mephoto aria-label="Add a photo">' + ico('cam') + '</button></div>' +
+    '<h3 id="modal-h">Nice to meet you, ' + h(fname(m.name)) + '!</h3>' +
+    '<p>Add a photo and phone number so friends recognize you \u2014 your number also links your other devices.</p>' +
+    '<input class="inp" id="fin-phone" type="tel" inputmode="tel" maxlength="20" ' +
+      'placeholder="Phone number" value="' + h(m.phone) + '">' +
+    '<button class="modal-cta" type="button" data-finish>Save</button>' +
+    '<button class="modal-later" type="button" data-modal-close>Skip for now</button>' +
   '</div>';
 }
 function renderProfile(){
@@ -3324,8 +3405,6 @@ function bottomNav(active){
     '<a class="bnav-new" href="#create" data-nav><span class="em">\uD83D\uDDD3\uFE0F</span>New Event</a>'+
     '<a class="bnav-i" href="#calendar" data-nav'+(active==='calendar'?' aria-current="page"':'')+'>'+
       ico('cal-p')+'<span>Calendar</span></a>'+
-    '<a class="bnav-i" href="#profile" data-nav'+(active==='profile'?' aria-current="page"':'')+'>'+
-      ico('person')+'<span>Profile</span></a>'+
   '</nav>';
 }
 function eventDock(id){
@@ -3585,6 +3664,19 @@ function eventDock(id){
       var cb=pendingName; pendingName=null;
       closeModal();
       if(cb) cb();
+      return;
+    }
+    if(t.closest('[data-finish]')){
+      var fp=document.getElementById('fin-phone');
+      var mf=loadMe(); if(fp) mf.phone=fp.value;
+      saveMe(); propagateMe(); closeModal();
+      toast('Profile updated'); return;
+    }
+    var gsec=t.closest('[data-gsec]');
+    if(gsec){
+      guestsOpen[gsec.dataset.gsec]=!guestsOpen[gsec.dataset.gsec];
+      var r14=route();
+      if(r14.v==='guests') app.innerHTML=renderGuests(r14.id);
       return;
     }
 
@@ -3859,6 +3951,7 @@ function eventDock(id){
       shrinkImage(f,192,function(url){
         if(!url){ toast('Could not read that image.','err'); return; }
         var m=loadMe(); m.photo=url; saveMe(); propagateMe(); repaintProfile();
+        var fa=document.querySelector('.fin-av img'); if(fa) fa.src=meAvatar();
       });
     };
     input.click();
@@ -3892,10 +3985,18 @@ function eventDock(id){
     if(m.events.indexOf(id)<0) m.events.push(id);
     var pr=pendingRsvp; pendingRsvp=null;
     saveMe(); closeModal();
+    if(STORE.mode==='live' && window.D2C && D2C.announceGuest && !m.rsvp[id])
+      D2C.announceGuest(id).catch(function(){});
     toast('Welcome, '+fname(name)+'!');
     if(pr && pr.id===id){
       var pb=document.querySelector('#rsvp button[data-k="'+pr.k+'"]');
       if(pb) rsvp(pb);
+    }
+    /* one soft follow-up: a face and a number, both skippable */
+    var m2=loadMe();
+    if(!m2.phone || !m2.photo){
+      modal.innerHTML=finishCard(); modal.hidden=false;
+      document.body.classList.add('modal-open');
     }
   }
   function repaintStep4(){
@@ -4731,6 +4832,17 @@ async function deleteEvent(id){
   ok("event deleted: " + FS_ROOT.join("/") + "/events/" + id);
 }
 
+/* ---------------- a named viewer joins the waiting list ---------------- */
+async function announceGuest(eventId){
+  const { db, fs } = await initFirebase();
+  const me = meIdent();
+  await fs.setDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", me.fsId || "anon"), {
+    uid: me.fsId, name: me.name, avatarUrl: me.av, message: "",
+    invitedLabel: "Viewing this event", isHost: false, isYou: false,
+    status: "pending", order: Date.now(), source: "visit"
+  }, { merge: true });
+}
+
 /* ---------------- profile propagation ---------------- */
 async function propagateProfile(p){
   const { db, fs } = await initFirebase();
@@ -4817,6 +4929,8 @@ async function watchDetail(id){
     const all = snap.docs.map(d => d.data());
     STORE.setDetail(id, {
       guests:  all.filter(g => g.status === "going").map(mapGuest),
+      maybes:  all.filter(g => g.status === "maybe").map(mapGuest),
+      cants:   all.filter(g => g.status === "cant").map(mapGuest),
       waiting: all.filter(g => g.status === "pending").map(mapGuest)
     });
   }, e => err("guests: " + e.code)));
@@ -4858,7 +4972,7 @@ async function sendMessage(eventId, text){
 
 window.D2C = {
   pickPhoto, sendMessage, uploadCover, createEvent, updateEvent, deleteEvent,
-  saveProfile, findByPhone, setRsvp, propagateProfile,
+  saveProfile, findByPhone, setRsvp, propagateProfile, announceGuest,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
   reconnect: connectLive
