@@ -413,6 +413,14 @@ a.guest:hover img,.more-g:hover{transform:scale(1.05)}
 .menu svg.i{width:21px;height:21px;color:var(--ink)}
 .menu .danger,.menu .danger svg.i{color:#ef4444}
 
+/* Discover expand: a card-shaped button under the rail */
+.disc-more{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:14px;
+  padding:15px;border-radius:18px;background:var(--card);color:var(--primary);
+  font-size:15.5px;font-weight:600;box-shadow:0 2px 10px rgba(30,30,100,.06);
+  transition:transform .16s,box-shadow .16s}
+.disc-more:hover{transform:translateY(-1px);box-shadow:0 8px 20px -8px rgba(40,40,140,.2)}
+.disc-more svg.i{width:18px;height:18px;stroke-width:2.2}
+
 .hid-note{margin:18px 2px 0;font-size:14.5px;color:var(--muted)}
 .hid-note button{color:var(--primary);font-weight:700;font-size:inherit}
 .hid-note button:hover{opacity:.75}
@@ -619,7 +627,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .cover-acts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
 .cover-acts .ghost{justify-content:center;min-height:56px}
 
-/* date / time / select fields — a native control sits transparent on top */
+/* date / time / select fields - a native control sits transparent on top */
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .pick{position:relative;display:flex;align-items:center;gap:11px;height:64px;padding:0 14px;
   border-radius:var(--r-md);background:#fff;border:1px solid var(--line-2);
@@ -672,7 +680,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .vibe>span{color:var(--muted)}
 .vibe[aria-pressed="true"] .vtile{box-shadow:0 6px 16px -7px rgba(30,30,110,.45)}
 .vibe[aria-pressed="true"]>span{color:var(--ink)}
-/* event-page vibe display — same tiles, read-only, sized to sit with the chips */
+/* event-page vibe display - same tiles, read-only, sized to sit with the chips */
 .vibe-show{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0 2px}
 .vibe-show .vibe{width:62px;gap:6px}
 .vibe-show .vtile{border-radius:16px}
@@ -1176,7 +1184,7 @@ button.view-all{display:block;width:100%;text-align:center}
 </div>
 <script>
 /* =====================================================================
-   DATA TABLE — every screen reads from here. Add a row, it shows up in
+   DATA TABLE - every screen reads from here. Add a row, it shows up in
    the Upcoming/Hosting/Past lists, the calendar, and gets a full detail
    page + guest list automatically.
    ===================================================================== */
@@ -1184,14 +1192,14 @@ button.view-all{display:block;width:100%;text-align:center}
 var TODAY = '2021-07-31';           // sample-data "today"; goLiveClock() swaps in the real date once Firestore connects
 var AV = function(seed){ return 'https://picsum.photos/seed/'+seed+'/140/140'; };
 var IMG = function(seed,w,h){ return 'https://picsum.photos/seed/'+seed+'/'+w+'/'+h; };
-/* generic grey person avatar — every real (non-sample) profile without a photo */
+/* generic grey person avatar - every real (non-sample) profile without a photo */
 var GAV = 'data:image/svg+xml,'+encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 140">'+
   '<rect width="140" height="140" fill="#e5e7eb"/>'+
   '<circle cx="70" cy="53" r="23" fill="none" stroke="#9ca3af" stroke-width="9"/>'+
   '<path d="M26 121a44 44 0 0 1 88 0" fill="none" stroke="#9ca3af" stroke-width="9" stroke-linecap="round"/>'+
   '</svg>');
-/* default event cover — night-sky scene in the app palette, used at render
+/* default event cover - night-sky scene in the app palette, used at render
    time wherever a created event has no photo (the model keeps coverUrl "") */
 var DEF_COVER = 'data:image/svg+xml,'+encodeURIComponent(
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">'+
@@ -1322,7 +1330,7 @@ var SEED_EVENTS = [
     venue:'Skyline Rooftop', address:'88 Summit St, Redding, CA 96001',
     hostId:"jillian", role:'invited', dot:VIOLET, img:'rooftopmovie', map:'summitmap',
     going:8, maybe:3, cant:1, pending:4,
-    about:'Projector goes up at sundown. We\u2019re screening something loud and ridiculous. Beanbags provided, blankets are not \u2014 it gets cold up there.',
+    about:'Projector goes up at sundown. We\u2019re screening something loud and ridiculous. Beanbags provided, blankets are not - it gets cold up there.',
     vibe:'Party', capacity:'40 guests', entry:'$5 suggested', invite:'Invite only',
     chat:{ fromId:"jillian", msg:'Vote for the movie in the thread!', time:'1 hour ago', unread:5 },
     photos:['rm1','rm2','rm3','rm4'], photoCount:11, photoWhen:'3 days ago',
@@ -1401,7 +1409,7 @@ function hydrate(ev){
     });
   }
   /* grow the response lists toward the authored counts, then clamp the
-     counts to the rows — every page tells the same story */
+     counts to the rows - every page tells the same story */
   var used={};
   ev.guests.forEach(function(g){ used[g.id]=1; });
   ev.waiting.forEach(function(g){ used[g.id]=1; });
@@ -1433,7 +1441,7 @@ function hydrate(ev){
   /* Chat lives on the event as an array; this is the seeded thread. */
   if(!ev.thread){
     var canned=['Who\u2019s bringing what?','I can grab ice on the way.',
-                'What time should we get there?','Just parked \u2014 heading in.'];
+                'What time should we get there?','Just parked - heading in.'];
     ev.thread=[];
     for(var t=0;t<3;t++){
       ev.thread.push({ from: ev.guests[(t+1)%ev.guests.length].id,
@@ -1464,7 +1472,7 @@ function weekStart(s){ var d=parse(s); d.setDate(d.getDate()-d.getDay()); return
 </script>
 <script>
 /* =====================================================================
-   STORE — the single source the views render from.
+   STORE - the single source the views render from.
 
    Every view reads STORE.events. Those objects are shaped exactly like a
    Firestore event document, so the same rendering code serves both modes:
@@ -1577,7 +1585,7 @@ function commonizePhoto(photo){
   phoneMatches().forEach(function(p){ p.photo = photo; if(reg[p.uid]) reg[p.uid].photo = photo; });
   try{ localStorage.setItem(REG_KEY, JSON.stringify(reg)); }catch(e){}
 }
-/* linking changes who "hosting" means \u2014 recompute every event's role */
+/* linking changes who "hosting" means - recompute every event's role */
 function remapRoles(){
   var uids = myUids();
   STORE.events.forEach(function(e){
@@ -1599,7 +1607,7 @@ function myUids(){
   (m.cloudLinked || []).forEach(function(p){ if(out.indexOf(p.uid) < 0) out.push(p.uid); });
   return out;
 }
-/* my answer for an event \u2014 mine first, then anything a linked uid said */
+/* my answer for an event - mine first, then anything a linked uid said */
 function myPlus(id){
   var m = loadMe();
   if(m.plus[id]) return m.plus[id];
@@ -1687,7 +1695,7 @@ function ago(isoTs){
   return new Date(t).toLocaleDateString();
 }
 function msgFrom(m){
-  /* "me" is in the eye of the viewer — the stored isYou flag only breaks the
+  /* "me" is in the eye of the viewer - the stored isYou flag only breaks the
      tie for legacy messages that carry no uid. */
   return { fromUid: m.fromUid || "", fromName: m.fromName || "Someone",
            fromAvatarUrl: m.fromAvatarUrl || "", text: m.text || "",
@@ -1713,11 +1721,13 @@ function docToModel(id, d){
   return {
     id: id, slug: d.slug || id,
     title: d.title || "Untitled", dateISO: d.dateISO || "1970-01-01",
-    time: d.time || "", timeSort: d.timeSort != null ? d.timeSort : t24(d.time || ""),
+    /* older docs carry an en-dash time range - shown with a plain hyphen */
+    time: (d.time || "").replace(/–/g, "-"),
+    timeSort: d.timeSort != null ? d.timeSort : t24(d.time || ""),
     venue: d.venue || "", address: d.address || "", about: d.about || "",
     vibe: d.vibe || "Chill", vibes: d.vibes || [],
-    capacity: d.capacity || "\u2014", capacityMode: d.capacityMode || "", capacityMax: d.capacityMax || 0,
-    entry: d.entry || "\u2014", entryMode: d.entryMode || "", entryNote: d.entryNote || "",
+    capacity: d.capacity || "-", capacityMode: d.capacityMode || "", capacityMax: d.capacityMax || 0,
+    entry: d.entry || "-", entryMode: d.entryMode || "", entryNote: d.entryNote || "",
     inviteType: d.inviteType || "Invite only",
     join: d.join || "", banned: d.banned || [],
     /* step-3 settings ride along so both data modes keep every field */
@@ -1813,7 +1823,7 @@ function appendLocalMessage(id, text, imageUrl){
   STORE.notify();
 }
 
-/* Offline feed entry — live mode writes the activity doc instead and the
+/* Offline feed entry - live mode writes the activity doc instead and the
    stream brings it back. Newest first, matching the desc order. */
 function appendLocalActivity(id, icon, text, isCheck){
   var ev = STORE.byId[id]; if(!ev || !ev.activity) return;
@@ -1862,7 +1872,7 @@ function shown(list){ return list.filter(function(e){ return !isHidden(e); }); }
 
 /* ---------- chat read tracking ----------
    Per-viewer, per-event count of messages already seen; the unread badge is
-   whatever arrived past that mark. Stored locally — "read" is in the eye of
+   whatever arrived past that mark. Stored locally - "read" is in the eye of
    the viewer, never on the shared event. */
 var SEEN_KEY = 'd2c.seen.v1', SEEN = null;
 function seenMap(){
@@ -1880,11 +1890,14 @@ function unseenCount(ev){
 }
 
 /* An event is on your page only if you host it or one of your linked uids
-   opened it by direct link (any RSVP counts — a "can't go" stays visible so
+   opened it by direct link (any RSVP counts - a "can't go" stays visible so
    you can change your mind). Everything else stays invisible. */
 function inMyList(ev){
   if(isBanned(ev)) return false;
   if(ev.role === 'hosting') return true;
+  /* a public event you never answered is not part of your history - once
+     it has passed, it only lingers for people who chose going/maybe/no */
+  if(joinMode(ev) === 'public' && ev.dateISO < TODAY && !myRsvp(ev.id)) return false;
   var ids = myEvents();
   return ids.indexOf(ev.id) > -1 || (ev.slug && ids.indexOf(ev.slug) > -1);
 }
@@ -1897,7 +1910,7 @@ function upcoming(){ return mineOnly(STORE.events.filter(function(e){ return e.d
 function past(){ return mineOnly(STORE.events.filter(function(e){ return e.dateISO < TODAY; }))
   .slice().reverse(); }
 function hosting(){ return mineOnly(STORE.events.filter(function(e){ return e.role === "hosting"; })); }
-/* public events for anyone visiting the site — the Discover rail */
+/* public events for anyone visiting the site - the Discover rail */
 function discover(q){
   return shown(STORE.events.filter(function(e){
     return joinMode(e) === 'public' && e.dateISO >= TODAY && !isBanned(e) &&
@@ -1982,7 +1995,7 @@ function groupByMonth(list){
 function dataBanner(){
   if(STORE.mode==='live') return '';
   return '<div class="banner">'+ico('globe')+'<span>'+
-    (STORE.error ? h(STORE.error) : 'Showing bundled sample data \u2014 Firebase not connected.')+
+    (STORE.error ? h(STORE.error) : 'Showing bundled sample data - Firebase not connected.')+
     ' <a href="#debug" data-nav>Open debug</a></span></div>';
 }
 
@@ -1999,10 +2012,11 @@ function draftCard(d){
       '<div class="ewhen"><span>'+dp.dowShort+', '+dp.monShort+' '+dp.day+' \u00B7 '+h(d.time)+'</span></div>'+
     '</div>'+
     '<div class="edate"><b>'+dp.day+'</b><span>'+dp.monUp+'</span></div></div>'+
-    '<div class="ehost"><p>Not sent to anyone yet \u2014 tap to keep editing</p>'+
+    '<div class="ehost"><p>Not sent to anyone yet - tap to keep editing</p>'+
       '<span class="pill draft">Draft</span></div>'+
   '</div></div>';
 }
+var DISC_OPEN=false;   /* Discover rail folded to 3 until expanded */
 function homeList(tab,q){
   var list = (tab==='hosting'?hosting() : tab==='past'?past() : upcoming())
               .filter(function(e){ return matches(e,q); });
@@ -2016,12 +2030,23 @@ function homeList(tab,q){
     if(ds.length) dr='<h3 class="mon-h">Drafts</h3><div class="ecards">'+
       ds.map(draftCard).join('')+'</div>';
   }
-  /* public events surface for everyone, below whatever is theirs */
+  /* public events surface for everyone, below whatever is theirs -
+     three at first, the rest behind the expand button */
   var disc='';
   if(tab==='upcoming'){
     var pub=discover(q);
-    if(pub.length) disc='<h3 class="mon-h">Discover</h3><div class="ecards">'+
-      pub.map(eventCard).join('')+'</div>';
+    if(pub.length){
+      var pshow=DISC_OPEN?pub:pub.slice(0,3);
+      disc='<h3 class="mon-h">Discover</h3><div class="ecards">'+
+        pshow.map(eventCard).join('')+'</div>'+
+        (pub.length>3
+          ? '<button class="disc-more" type="button" data-discmore aria-expanded="'+DISC_OPEN+'">'+
+            (DISC_OPEN
+              ? 'Show less'+ico('chevu')
+              : 'Show all ('+pub.length+')<svg class="i" style="transform:rotate(180deg)"><use href="#chevu"/></svg>')+
+            '</button>'
+          : '');
+    }
   }
   if(!list.length){
     if(dr) return dr + disc + foot;
@@ -2048,7 +2073,7 @@ function renderHome(tab,q,open){
       '<div class="page-h"><h1>Events</h1><div class="btns">'+
         '<button class="round-btn'+(open?' on':'')+'" type="button" data-focus-search '+
           'aria-expanded="'+!!open+'" aria-label="Search events">'+ico('search')+'</button>'+
-        /* filters is parked for now — unhide when it does something */
+        /* filters is parked for now - unhide when it does something */
         '<button class="round-btn" type="button" aria-label="Filters" style="display:none">'+ico('sliders')+'</button>'+
         '<a class="round-btn" href="#profile" data-nav aria-label="Your profile">'+
           '<img class="me-mini" src="'+h(meAvatar())+'" alt=""></a>'+
@@ -2069,7 +2094,7 @@ function renderHome(tab,q,open){
 
 /* ================= CALENDAR ================= */
 var calState={ y:2021, m:6, sel:TODAY, mode:'month', q:'', open:1 };
-/* live data runs on the real clock — the mock date only serves the bundled
+/* live data runs on the real clock - the mock date only serves the bundled
    sample set. Called once, just before the first live paint. */
 function goLiveClock(){
   TODAY = isoOf(new Date());
@@ -2094,7 +2119,7 @@ function calBody(){
   if(calState.mode==='week'){
     var ws=weekStart(calState.sel), we=addDays(ws,6);
     var a=dparts(ws), b=dparts(we);
-    label = a.monShort+' '+a.day+' \u2013 '+(a.mon===b.mon? b.day : b.monShort+' '+b.day)+', '+b.year;
+    label = a.monShort+' '+a.day+' - '+(a.mon===b.mon? b.day : b.monShort+' '+b.day)+', '+b.year;
     for(i=0;i<7;i++) cells+=calCell(addDays(ws,i),false,q,3);
   } else {
     var y=calState.y, m=calState.m,
@@ -2151,7 +2176,7 @@ function renderCalendar(){
       '<div class="moon"></div>'+
       '<div class="page-h"><h1>Calendar</h1><div class="btns">'+
         '<button class="round-btn" type="button" data-toggle-search aria-label="Search events">'+ico('search')+'</button>'+
-        /* filters is parked for now — unhide when it does something */
+        /* filters is parked for now - unhide when it does something */
         '<button class="round-btn" type="button" aria-label="Filters" style="display:none">'+ico('sliders')+'</button>'+
       '</div></div>'+
       '<div class="segs" role="tablist">'+
@@ -2166,7 +2191,7 @@ function renderCalendar(){
 }
 
 /* ================= EVENT DETAIL ================= */
-/* the event's vibes as picker-style tiles — a seeded event only stores a text
+/* the event's vibes as picker-style tiles - a seeded event only stores a text
    label, which still gets a tile when it names a known vibe */
 function vibeShow(ev){
   var keys=(ev.vibes && ev.vibes.length ? ev.vibes : [ev.vibe])
@@ -2218,7 +2243,7 @@ function renderEvent(id){
                 (actsOpen?'Show less':'View all ('+acts.length+')')+'</button>'
             : '')+
           (actsOpen || acts.length<=5 ? '<p class="caught">You\u2019re all caught up!</p>' : '')
-        : '<p class="skel">Nothing yet \u2014 RSVPs, photos and chat show up here.</p>')
+        : '<p class="skel">Nothing yet - RSVPs, photos and chat show up here.</p>')
     : skel('Loading activity\u2026');
 
   return '<div class="wrap">'+
@@ -2244,7 +2269,7 @@ function renderEvent(id){
           '&nbsp; \u00B7 &nbsp;'+h(ev.time)+'</div></div>'+
         '<div class="row place">'+ico('pin')+'<div><b>'+h(ev.venue)+'</b><span>'+h(ev.address)+'</span></div></div>'+
       '</div>'+
-      /* the host never RSVPs \u2014 they are going by definition, so no buttons */
+      /* the host never RSVPs - they are going by definition, so no buttons */
       (ev.role==='hosting'
         ? '<section class="sec"><div class="sec-h"><h2>RSVPs</h2></div>'+
           '<p class="tally"><b id="c-going">'+c.going+'</b> Going <i>\u00B7</i> <b id="c-maybe">'+c.maybe+
@@ -2253,10 +2278,10 @@ function renderEvent(id){
           '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
         '</section>'
         : myJoinRequest(ev)
-        /* asked to join, not approved yet \u2014 no buttons until the host says so */
+        /* asked to join, not approved yet - no buttons until the host says so */
         ? '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
           '<p class="tally">Request sent</p>'+
-          '<p class="note">'+h(fname(ev.hostName))+' will approve your request to join \u2014 '+
+          '<p class="note">'+h(fname(ev.hostName))+' will approve your request to join - '+
             'you can RSVP as soon as that happens.</p>'+
         '</section>'
         : '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
@@ -2347,7 +2372,7 @@ function guestBuckets(ev){
     ['going','maybe','cant','waiting'].forEach(function(k){
       var seen = {};
       b[k] = b[k].filter(function(g){
-        /* per-viewer — never trust a stored isYou flag */
+        /* per-viewer - never trust a stored isYou flag */
         g.isYou = (!!g.uid && g.uid === m.uid) ||
                   (!!myName && g.name.toLowerCase() === myName.toLowerCase());
         var key = g.name.toLowerCase(), first = seen[key];
@@ -2363,7 +2388,7 @@ function guestBuckets(ev){
       });
     });
   } else if(myName && ev.role !== 'hosting' && canJoin(ev)){
-    /* canJoin keeps un-approved requesters out of every list — a request
+    /* canJoin keeps un-approved requesters out of every list - a request
        shows nowhere until the host approves it */
     ['going','maybe','cant','waiting'].forEach(function(k){
       b[k] = b[k].filter(function(g){ return !mine(g); });
@@ -2449,7 +2474,7 @@ function renderGuests(id){
   var reqs=(ev.role==='hosting') ? (ev.requests||[]) : [];
   var reqCard = reqs.length
     ? '<section class="lcard"><h2>Requests ('+reqs.length+')</h2>'+
-      '<p class="sub">Approve to add them to the guest list \u2014 until then they\u2019re invisible to guests.</p>'+
+      '<p class="sub">Approve to add them to the guest list - until then they\u2019re invisible to guests.</p>'+
       reqs.map(reqRow).join('')+'</section>'
     : '';
   var lists = b
@@ -2487,11 +2512,11 @@ function renderGuests(id){
     '<section class="slink"><div class="slink-top"><div><h2>Share Event Link</h2>'+
       '<p>'+(joinMode(ev)==='public' ? 'Anyone can find this public event and join.'
            : joinMode(ev)==='open' ? 'Anyone with the link can join.'
-           : joinMode(ev)==='guests' ? 'Anyone with the link can claim an invited name — or ask to join.'
-           : 'Invited names only — join requests go to '+h(fname(ev.hostName))+'.')+'</p></div>'+
+           : joinMode(ev)==='guests' ? 'Anyone with the link can claim an invited name - or ask to join.'
+           : 'Invited names only - join requests go to '+h(fname(ev.hostName))+'.')+'</p></div>'+
       '<button class="ghost" type="button" data-share-kind="event" data-share-id="'+ev.id+'">'+
         ico('link')+'Copy Link</button></div>'+
-      /* parked until the backend can rotate links — unhide when it can */
+      /* parked until the backend can rotate links - unhide when it can */
       '<button class="regen" type="button" style="display:none">'+ico('refresh')+'Regenerate Link</button></section>'+
   '</div>';
 }
@@ -2589,7 +2614,7 @@ function composer(id){
 /* ================= FIREBASE DEBUG (scratch page) ================= */
 function renderDebug(){
   var opts=SEED_EVENTS.map(function(e){
-    return '<option value="'+e.id+'" data-local="'+e.id+'">'+h(e.title)+' \u2014 '+
+    return '<option value="'+e.id+'" data-local="'+e.id+'">'+h(e.title)+' - '+
            dparts(e.date).monShort+' '+dparts(e.date).day+'</option>';
   }).join('');
 
@@ -2608,7 +2633,7 @@ function renderDebug(){
 
     '<div class="fb-card"><h3>1 \u00B7 Seed Firestore</h3>'+
       '<p>Writes all '+SEED_EVENTS.length+' hardcoded events plus people, guests, photos, activity and chat '+
-      'into Firestore under <code>apps/down2chill/</code>. Safe to re-run \u2014 it overwrites by id.</p>'+
+      'into Firestore under <code>apps/down2chill/</code>. Safe to re-run - it overwrites by id.</p>'+
       '<button class="fb-btn" type="button" id="fb-seed">Push '+SEED_EVENTS.length+' events to Firestore</button>'+
     '</div>'+
 
@@ -2654,7 +2679,7 @@ var VIBES = [
   { k:'Custom',   ic:'v-custom',   bg:'#FECDD3', fg:'#FB7185' }
 ];
 /* iconN.svg (grey #E5E7EB / #9CA3AF) is the unselected tile, iconN-bg.svg the
-   selected one — same geometry, so one symbol plus these colours covers both. */
+   selected one - same geometry, so one symbol plus these colours covers both. */
 var VIBE_OFF = { bg:'#E5E7EB', fg:'#9CA3AF' };
 var VIBE_BY = {};
 VIBES.forEach(function(v){ VIBE_BY[v.k] = v; });
@@ -2686,7 +2711,7 @@ function saveEventDraft(){
   var d = loadDraft(), list = eventDrafts(), snap = {}, k, i;
   if(!d.draftId) d.draftId = 'dft-' + Date.now().toString(36);
   for(k in d) if(k.charAt(0) !== '_') snap[k] = d[k];
-  /* a blob: preview dies with the session — the card would render broken */
+  /* a blob: preview dies with the session - the card would render broken */
   if(!snap.coverPath && /^blob:/.test(snap.coverUrl || '')) snap.coverUrl = '';
   for(i = 0; i < list.length; i++) if(list[i].draftId === d.draftId) break;
   list[i] = snap;
@@ -2704,7 +2729,7 @@ function resumeEventDraft(id){
   return true;
 }
 
-/* the settings of the last event this device created — new drafts start
+/* the settings of the last event this device created - new drafts start
    from them, so a repeat host never re-picks the same choices */
 var LAST_KEY = 'd2c.lastset.v1';
 function lastSettings(){
@@ -2721,12 +2746,12 @@ function rememberSettings(d){
   }catch(e){}
 }
 function blankDraft(){
-  /* the real clock, not the mock TODAY — one week out, 7pm */
+  /* the real clock, not the mock TODAY - one week out, 7pm */
   var start = addDays(isoOf(new Date()), 7);
   var d = { draftId:'', title:'', coverUrl:'', coverPath:'',
            date:start, time:'7:00 PM', endTime:null,
            venue:'', address:'', about:'', vibes:[],
-           /* step 3 — 'open' is the first-time default */
+           /* step 3 - 'open' is the first-time default */
            capMode:'custom', capacity:30,
            join:'open',
            plusMode:'one', plusN:2,
@@ -2749,13 +2774,13 @@ function loadDraft(){
     var saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if(saved) for(var k in DRAFT){ if(saved[k] != null) DRAFT[k] = saved[k]; }
   }catch(e){}
-  /* an object URL from a previous session is dead \u2014 drop the preview */
+  /* an object URL from a previous session is dead - drop the preview */
   if(/^blob:/.test(DRAFT.coverUrl) && !DRAFT.coverPath) DRAFT.coverUrl = '';
   if(!Array.isArray(DRAFT.vibes)) DRAFT.vibes = [];
   if(!Array.isArray(DRAFT.reminders)) DRAFT.reminders = [];
   if(!Array.isArray(DRAFT.invitees)) DRAFT.invitees = [];
   if(!Array.isArray(DRAFT.extra)) DRAFT.extra = [];
-  /* a contact icon is an object URL — dead after a reload, so fall back */
+  /* a contact icon is an object URL - dead after a reload, so fall back */
   DRAFT.extra.forEach(function(e){ if(/^blob:/.test(e.photo || '')) e.photo = ''; });
   /* an old saved draft keeps its fields but never a past date */
   var today = isoOf(new Date());
@@ -2894,7 +2919,7 @@ function renderCreate1(){
 
 /* ---------- step 2 ---------- */
 function vibeGrid(d){
-  /* every vibe up front — no "More" fold */
+  /* every vibe up front - no "More" fold */
   return '<div class="vibes">' + VIBES.map(function(v){
     var on = d.vibes.indexOf(v.k) > -1, c = on ? v : VIBE_OFF;
     return '<button class="vibe" type="button" data-vibe="' + h(v.k) + '" aria-pressed="' + on + '">' +
@@ -2918,7 +2943,7 @@ function renderCreate2(){
         '<section><h2 class="fld">Vibe</h2>' +
           '<p class="fsub">Help guests know what to expect. Pick as many as fit.</p>' + vibeGrid(d) + '</section>' +
         '<section><h2 class="fld">Guest Settings</h2>' +
-          '<p class="fsub">The essentials — step 3 opens every option.</p>' +
+          '<p class="fsub">The essentials - step 3 opens every option.</p>' +
           step2Settings(d) + '</section>' +
         '<section><h2 class="fld">Reminders</h2>' +
           '<p class="fsub">Keep your guests in the loop.</p>' +
@@ -2926,7 +2951,7 @@ function renderCreate2(){
     '</div></div>';
 }
 
-/* ================= STEP 3 \u2014 guest settings & reminders =================
+/* ================= STEP 3 - guest settings & reminders =================
    Everything step 2 used to squeeze into collapsed <select> rows lives here
    as a full editor. The header row of each card stays as the summary, and
    the chevron folds the card away.
@@ -2935,13 +2960,13 @@ function renderCreate2(){
 /* ---- who can join: one ladder from wide open to host-approved ---- */
 var JOIN_OPTS = [
   { k:'public',  ic:'globe',     t:'Public',                lab:'Public',
-    s:'Listed on Down2Chill — anyone can find it, join, and invite others.' },
+    s:'Listed on Down2Chill - anyone can find it, join, and invite others.' },
   { k:'open',    ic:'link',      t:'Anyone With the Link',  lab:'Anyone with the link',
-    s:'The link is the invitation — anyone who has it can join and invite others.' },
+    s:'The link is the invitation - anyone who has it can join and invite others.' },
   { k:'guests',  ic:'user-plus', t:'Guests Can Invite',     lab:'Guests can invite',
     s:'Guests join by claiming an invited name and can invite more people. Someone not on the list can ask you to join.' },
   { k:'private', ic:'lock',      t:'Private',               lab:'Private',
-    s:'Only names you approve get in — guests’ invites and join requests come to you first.' }
+    s:'Only names you approve get in - guests’ invites and join requests come to you first.' }
 ];
 function joinOpt(k){
   for(var i = 0; i < JOIN_OPTS.length; i++) if(JOIN_OPTS[i].k === k) return JOIN_OPTS[i];
@@ -2955,7 +2980,7 @@ var RSVP_OPTS = [
 var UNIT_MIN = { Minutes:1, Hours:60, Days:1440, Weeks:10080 };
 var REM_PRESETS = [ ['10080','1 Week Before'], ['1440','1 Day Before'], ['60','1 Hour Before'] ];
 
-/* which cards are folded open \u2014 view state, not part of the draft */
+/* which cards are folded open - view state, not part of the draft */
 var SEC_OPEN = { cap:1, join:1, plus:1, rsvp:1, entry:1, rem:1 };
 
 /* ---------- derived labels: one value, two presentations ---------- */
@@ -3042,7 +3067,7 @@ function cardCapacity(d){
       ? stepper('capacity', d.capacity, [2, 500]) +
         '<p class="onote">Tap the number to type an exact limit.</p>' +
         '<p class="onote">The host and co-hosts do not count toward capacity.</p>' +
-        '<p class="onote">Suggested range: 2\u2013500 guests.</p>'
+        '<p class="onote">Suggested range: 2-500 guests.</p>'
       : ''));
 }
 function cardJoin(d){
@@ -3052,7 +3077,7 @@ function cardJoin(d){
         return optRow('join', o.k, d.join === o.k, o.t, o.s, o.ic);
       }).join('') +
     '</div>' +
-    '<p class="onote">Whoever joins, you stay in charge — you can remove any guest, ' +
+    '<p class="onote">Whoever joins, you stay in charge - you can remove any guest, ' +
       'and requests wait for your approval.</p>');
 }
 function cardPlus(d){
@@ -3234,7 +3259,7 @@ var STATUSES = [
   'New in town', 'Always up for a swim \uD83C\uDFCA'
 ];
 
-/* Set by the app controller below — the helpers here live in an earlier
+/* Set by the app controller below - the helpers here live in an earlier
    script block, so this is how they ask step 4 to redraw. */
 var repaintInvites = function(){};
 
@@ -3300,7 +3325,7 @@ function contactToPerson(c){
 }
 function importContacts(){
   if(!contactsReady()){
-    toast('Your contacts aren\u2019t available in this browser \u2014 add people by name below.', 'err', 5000);
+    toast('Your contacts aren\u2019t available in this browser - add people by name below.', 'err', 5000);
     return;
   }
   var run = function(props){
@@ -3528,9 +3553,9 @@ function inviteBody(){
       '<span class="gtx"><b>Use your contacts</b><span>' +
         (contactsReady()
           ? 'Pick from your phone\u2019s address book, or import a saved contacts file.'
-          : 'This browser has no contact picker \u2014 in your Contacts app choose Share \u2192 vCard, then import the file here.') +
+          : 'This browser has no contact picker - in your Contacts app choose Share \u2192 vCard, then import the file here.') +
       '</span>' +
-      '<button class="alt" type="button" data-vcf>Import a contacts file (.vcf) \u2014 adds everyone at once</button>' +
+      '<button class="alt" type="button" data-vcf>Import a contacts file (.vcf) - adds everyone at once</button>' +
       '</span>' +
       (contactsReady() ? '<button type="button" data-contacts>Allow</button>' : '') +
     '</div></section>') +
@@ -3556,7 +3581,7 @@ function inviteBody(){
     '<div class="glist" id="g-list">' + inviteList() + '</div></section>' +
 
     '<section class="full"><h2 class="fld">Add someone yourself</h2>' +
-      '<p class="fsub">Not on Down2Chill yet? Type a name \u2014 add a phone number after it if you have one.</p>' +
+      '<p class="fsub">Not on Down2Chill yet? Type a name - add a phone number after it if you have one.</p>' +
       '<div class="addbox">' +
         '<input class="inp" id="c-add" type="text" autocomplete="off" ' +
           'placeholder="Sam Ruiz 555-0123" aria-label="Add a guest by name">' +
@@ -3635,8 +3660,9 @@ function numOf(s, dflt){
    these fields, so every one of them falls back to something sensible. */
 function eventToDraft(ev){
   var d = blankDraft();
-  /* "4:00 PM – 6:00 PM" splits back into start + end */
-  var tp = String(ev.time || '').split(' – ');
+  /* "4:00 PM - 6:00 PM" splits back into start + end */
+  /* older docs stored the range with an en dash - accept either separator */
+  var tp = String(ev.time || '').split(/\s[–-]\s/);
   d.title = ev.title; d.date = ev.dateISO;
   d.time = tp[0] || ''; d.endTime = tp[1] || null;
   d.venue = ev.venue; d.address = ev.address; d.about = ev.about;
@@ -3677,14 +3703,14 @@ function editCleanup(saved){
   del.forEach(function(p){ D2C.deleteFile(p); });
 }
 
-/* The basics the edit screen owns beyond step 3 — same field names the event
+/* The basics the edit screen owns beyond step 3 - same field names the event
    document already stores, so live updateDoc and the local merge both apply
    it directly. */
 function basicsPatch(d){
   var title = d.title.trim(),
       cover = /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
       p = { title: title, titleLower: title.toLowerCase(),
-            dateISO: d.date, time: d.endTime ? (d.time + ' – ' + d.endTime) : d.time,
+            dateISO: d.date, time: d.endTime ? (d.time + ' - ' + d.endTime) : d.time,
             timeSort: t24(d.time),
             venue: d.venue.trim(), address: d.address.trim(), about: d.about.trim(),
             vibe: d.vibes.length ? d.vibes.join(' · ') : 'Chill', vibes: d.vibes.slice(),
@@ -3700,7 +3726,7 @@ function settingsPatch(d){
     capacity: capLabel(d), capacityMode: d.capMode,
     capacityMax: d.capMode === 'unlimited' ? 0 : d.capacity,
     entry: entryLabel(d), entryMode: d.entryMode, entryNote: d.entryNote.trim(),
-    /* one ladder — the legacy pair is derived so older readers stay coherent */
+    /* one ladder - the legacy pair is derived so older readers stay coherent */
     join: d.join,
     inviteType: d.join === 'open' ? 'Open Invite'
               : d.join === 'public' ? 'Public Link' : 'Invite Only',
@@ -3735,7 +3761,7 @@ function editFoot(){
 }
 /* The full editor: the step-1/2 basics stacked above the step-3 cards. Every
    control is the create screen's own (same ids and data hooks), all writing
-   into loadDraft() — which is EDIT.draft while an edit is open. */
+   into loadDraft() - which is EDIT.draft while an edit is open. */
 function renderEditPage(){
   var d = loadDraft();
   return '<div class="wrap">' + editHead() +
@@ -3805,7 +3831,7 @@ function takeCover(file){
   var d = loadDraft();
   if(!/^image\//.test(file.type)){ toast('That file isn\u2019t an image.', 'err'); return; }
   if(file.size > 25 * 1024 * 1024){
-    toast('That image is ' + (file.size/1048576).toFixed(1) + ' MB \u2014 the limit is 25 MB.', 'err', 4000);
+    toast('That image is ' + (file.size/1048576).toFixed(1) + ' MB - the limit is 25 MB.', 'err', 4000);
     return;
   }
   /* offline / unconfigured: show a local preview so the flow still works */
@@ -3814,7 +3840,7 @@ function takeCover(file){
     d._objUrl = URL.createObjectURL(file);
     d.coverUrl = d._objUrl; d.coverPath = '';
     saveDraft(); repaintCover();
-    toast('Local preview only \u2014 connect Firebase to upload.', 'err', 4500);
+    toast('Local preview only - connect Firebase to upload.', 'err', 4500);
     return;
   }
   var oldPath = d.coverPath;
@@ -3847,7 +3873,7 @@ function dropCover(d){
 function draftBase(d, id, hostUid){
   var m0 = loadMe(), me = { name: m0.name || 'Guest', av: meAvatar() },
       title = d.title.trim(),
-      when = d.endTime ? (d.time + ' \u2013 ' + d.endTime) : d.time;
+      when = d.endTime ? (d.time + ' - ' + d.endTime) : d.time;
   return {
     uid: id, slug: id,
     title: title, titleLower: title.toLowerCase(),
@@ -3855,7 +3881,7 @@ function draftBase(d, id, hostUid){
     venue: d.venue.trim(), address: d.address.trim(), about: d.about.trim(),
     vibe: d.vibes.length ? d.vibes.join(' \u00B7 ') : 'Chill', vibes: d.vibes.slice(),
     dot: vibeDot(d.vibes), role: 'hosting',
-    /* a blob: preview is session-local — never let one into the document */
+    /* a blob: preview is session-local - never let one into the document */
     coverPath: d.coverPath || '',
     coverUrl: /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
     thumbUrl: /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
@@ -3876,7 +3902,7 @@ function draftDoc(d, id, hostUid){
   /* step 3's fields live in settingsPatch so create and edit stay identical */
   return mergeInto(draftBase(d, id, hostUid), settingsPatch(d));
 }
-/* Offline fallback — the same document, kept in memory only. */
+/* Offline fallback - the same document, kept in memory only. */
 function createLocalEvent(d){
   var id = 'draft-' + Date.now().toString(36),
       me = { name: loadMe().name || 'Guest', av: meAvatar() },
@@ -3906,7 +3932,7 @@ function plusMaxOf(ev){
   return m ? +m[1] : 0;
 }
 function plusRowInner(ev){
-  /* the host never RSVPs — they are going by definition */
+  /* the host never RSVPs - they are going by definition */
   var my = myRsvp(ev.id) || (ev.role === 'hosting' ? 'going' : '');
   if(my !== 'going' && my !== 'maybe') return '';
   var max = plusMaxOf(ev);
@@ -3923,7 +3949,7 @@ function isPublicEvent(ev){
   return ev.visibilityMode === 'public' || /public/i.test(ev.visibility || '') ||
          ev.inviteType === 'Public Link';
 }
-/* the host's curated list plus anyone added from the invite sheet later \u2014
+/* the host's curated list plus anyone added from the invite sheet later -
    the identities a visitor can claim, and the roster the invite gates check */
 function inviteePool(ev){
   var seen = {}, out = [];
@@ -3967,7 +3993,7 @@ function canJoin(ev){
   var jm = joinMode(ev);
   return ev.role === 'hosting' || jm === 'open' || jm === 'public' || amJoined(ev);
 }
-/* names already claimed by some OTHER visitor \u2014 from streamed guest rows
+/* names already claimed by some OTHER visitor - from streamed guest rows
    (live) and from every registry profile's claims map (local) */
 function takenNames(ev){
   var m = loadMe(), out = {};
@@ -4015,7 +4041,7 @@ function claimCard(ev){
   '</div>';
 }
 /* ---- an event that no longer exists for this viewer (deleted, or the
-   host removed them) — indistinguishable on purpose */
+   host removed them) - indistinguishable on purpose */
 function renderGone(){
   return '<div class="wrap narrow">' +
     '<header class="top">' +
@@ -4044,7 +4070,7 @@ function inviteCard(ev){
     '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
     '<div class="modal-ic">' + ico('user-plus') + '</div>' +
     '<h3 id="modal-h">Invite friends</h3>' +
-    '<p>Add a name \u2014 with a phone number too, like <b>Sam Ruiz 555-0123</b>. ' +
+    '<p>Add a name - with a phone number too, like <b>Sam Ruiz 555-0123</b>. ' +
       'They\u2019ll find their name waiting when they open the event link.</p>' +
     (rows ? '<div class="claim-list">' + rows + '</div>' : '') +
     '<div class="addbox">' +
@@ -4075,7 +4101,7 @@ function finishCard(){
     '<div class="fin-av"><img src="' + h(meAvatar()) + '" alt="">' +
       '<button class="cam" type="button" data-mephoto aria-label="Add a photo">' + ico('cam') + '</button></div>' +
     '<h3 id="modal-h">Nice to meet you, ' + h(fname(m.name)) + '!</h3>' +
-    '<p>Add a photo and phone number so friends recognize you \u2014 your number also links your other devices.</p>' +
+    '<p>Add a photo and phone number so friends recognize you - your number also links your other devices.</p>' +
     '<input class="inp" id="fin-phone" type="tel" inputmode="tel" maxlength="20" ' +
       'placeholder="Phone number" value="' + h(m.phone) + '">' +
     '<button class="modal-cta" type="button" data-finish>Save</button>' +
@@ -4094,7 +4120,7 @@ function verifyCard(){
       'autocomplete="one-time-code" placeholder="\u2022\u2022\u2022\u2022\u2022\u2022">' +
     '<button class="modal-cta" type="button" data-verify>Verify & Link</button>' +
     '<button class="modal-later" type="button" data-modal-close>Not now</button>' +
-    '<p class="onote center">Demo build \u2014 no text is actually sent, any 6 digits work.</p>' +
+    '<p class="onote center">Demo build - no text is actually sent, any 6 digits work.</p>' +
   '</div>';
 }
 /* candidates + current picks, set by finishLink before the sheet opens */
@@ -4121,10 +4147,10 @@ function mergeCard(){
     '<button class="modal-x" type="button" data-modal-close aria-label="Keep the most recent">' + ico('x') + '</button>' +
     '<div class="modal-ic">' + ico('person') + '</div>' +
     '<h3 id="modal-h">Make them one</h3>' +
-    '<p>Your linked accounts differ. Pick what everyone should see \u2014 skipping keeps the most recent.</p>' +
+    '<p>Your linked accounts differ. Pick what everyone should see - skipping keeps the most recent.</p>' +
     nameSec + photoSec +
     '<button class="modal-cta go" type="button" data-mergego>Save</button>' +
-    '<button class="modal-later" type="button" data-modal-close>Skip \u2014 keep most recent</button>' +
+    '<button class="modal-later" type="button" data-modal-close>Skip - keep most recent</button>' +
   '</div>';
 }
 function renderProfile(){
@@ -4145,7 +4171,7 @@ function renderProfile(){
         '<label class="lab" for="me-phone">Phone number</label>' +
         '<input class="inp" id="me-phone" type="tel" inputmode="tel" maxlength="20" data-me="phone" ' +
           'placeholder="555-0123" value="' + h(m.phone) + '">' +
-        '<p class="onote">Add your number and every device you use it on becomes one account \u2014 ' +
+        '<p class="onote">Add your number and every device you use it on becomes one account - ' +
           'events from each show up everywhere.</p>' +
         '<button class="cta solo" type="button" data-mesave>Save Profile</button>' +
       '</div>' +
@@ -4218,7 +4244,7 @@ function eventDock(id){
   function render(){
     closeMenu();
     var r=route(), key=location.hash||'#home';
-    remapRoles();   /* who is looking may have changed — roles are per-viewer */
+    remapRoles();   /* who is looking may have changed - roles are per-viewer */
 
     /* Detail views stream their subcollections; attach on entry, drop on exit. */
     var wants = (r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat') ? r.id : null;
@@ -4294,14 +4320,14 @@ function eventDock(id){
     if(curKeyChanged) jump((r.v==='guests'||r.v==='photos') ? 0 : restore);
   }
 
-  /* programmatic scrolls are instant — CSS smooth-behavior is for the user */
+  /* programmatic scrolls are instant - CSS smooth-behavior is for the user */
   function jump(y){
     app.style.scrollBehavior='auto';
     app.scrollTop=y;
     app.style.scrollBehavior='';
   }
 
-  /* same view slot, new hash — no extra history entry */
+  /* same view slot, new hash - no extra history entry */
   function swapHash(hash){
     history.replaceState(history.state||{d:0},'',hash);
     render();
@@ -4378,7 +4404,7 @@ function eventDock(id){
     }
     if(t.closest('[data-savedraft]')){
       saveEventDraft(); clearDraft();
-      toast('Draft saved \u2014 it\u2019s waiting under Hosting');
+      toast('Draft saved - it\u2019s waiting under Hosting');
       homeTab='hosting';
       history.replaceState({d:0},'','#home');
       render(); return;
@@ -4386,7 +4412,7 @@ function eventDock(id){
     var ddel=t.closest('[data-draftdel]');
     if(ddel){
       var dd=eventDrafts().filter(function(x){ return x.draftId===ddel.dataset.draftdel; })[0];
-      /* a draft's uploaded cover belongs to nothing else — clean it up */
+      /* a draft's uploaded cover belongs to nothing else - clean it up */
       if(dd && dd.coverPath && window.D2C && D2C.deleteFile) D2C.deleteFile(dd.coverPath);
       deleteEventDraft(ddel.dataset.draftdel);
       toast('Draft deleted'); render(); return;
@@ -4670,6 +4696,13 @@ function eventDock(id){
 
     if(t.closest('[data-unhide]')){ unhideAll(); toast('Hidden events restored'); render(); return; }
 
+    if(t.closest('[data-discmore]')){
+      DISC_OPEN=!DISC_OPEN;
+      var dlb=document.getElementById('list-body');
+      if(dlb) dlb.innerHTML=homeList(homeTab,homeQ);
+      return;
+    }
+
     var fs0=t.closest('[data-focus-search]');
     if(fs0){
       var bar=document.querySelector('.home-search');
@@ -4701,7 +4734,7 @@ function eventDock(id){
     if(ivw){ openImgLb(ivw.dataset.imgview, ivw.dataset.imgby||''); return; }
     var lbs=t.closest('[data-lb-step]');
     if(lbs){ stepLb(+lbs.dataset.lbStep); return; }
-    /* NB: `lb` is shadowed here — a `var lb` in the search branch above hoists
+    /* NB: `lb` is shadowed here - a `var lb` in the search branch above hoists
        over the lightbox element, so match the element itself. Clicks on the
        empty stage (beside the image) count as the backdrop too. */
     if(t.closest('[data-lb-close]') || t.id==='lightbox' || t.classList.contains('lb-stage')){
@@ -4860,7 +4893,7 @@ function eventDock(id){
     saveDraft();
   });
 
-  /* step 3 repaints in place \u2014 it holds no focused text field except the
+  /* step 3 repaints in place - it holds no focused text field except the
      entry note, which only ever changes on input, never on these clicks */
   function repaintStep3(){
     var g=document.querySelector('.c3');
@@ -4890,7 +4923,7 @@ function eventDock(id){
   /* verified: union the views, then settle on one name */
   /* every linked account ends up with ONE name and ONE photo. The newest is
      applied immediately, so closing or skipping the sheet already means
-     "keep the most recent" \u2014 the sheet only exists to override that. */
+     "keep the most recent" - the sheet only exists to override that. */
   function applyMerge(name, photo){
     if(name) commonizeName(name);
     if(photo) commonizePhoto(photo);
@@ -4986,7 +5019,7 @@ function eventDock(id){
   var claimShown={}, pendingRsvp=null, pendingName=null;
   function maybeClaim(id){
     var ev=findEvent(id); if(!ev) return;
-    /* wait for the guests stream — opening against the pre-stream snapshot
+    /* wait for the guests stream - opening against the pre-stream snapshot
        flashed names that were already claimed */
     if(ev.guests == null) return;
     var m=loadMe();
@@ -5093,7 +5126,7 @@ function eventDock(id){
   function doClaim(name, custom){
     var id=route().id, m=loadMe(), ev=findEvent(id);
     if(ev && takenNames(ev)[name.toLowerCase()]){
-      toast('Sorry \u2014 '+fname(name)+' is already taken here. Pick another name.','err',4500);
+      toast('Sorry - '+fname(name)+' is already taken here. Pick another name.','err',4500);
       return;
     }
     /* a typed name that matches the list IS a claim; an unlisted one on the
@@ -5142,7 +5175,7 @@ function eventDock(id){
     var m=loadMe();
     if(myJoinRequest(ev)){
       closeModal();
-      toast('Request already sent — waiting for '+fname(ev.hostName)+'.','',4500);
+      toast('Request already sent - waiting for '+fname(ev.hostName)+'.','',4500);
       return;
     }
     if(!m.name) m.name=name;             /* the typed name is their identity */
@@ -5157,7 +5190,7 @@ function eventDock(id){
         avatarUrl:meAvatar(), phone:normPhone(m.phone)||'', byName:'', docId:'' }]);
       STORE.notify();
     }
-    toast('Request sent — '+fname(ev.hostName)+' approves new names.','',5000);
+    toast('Request sent - '+fname(ev.hostName)+' approves new names.','',5000);
   }
   /* ---------- the host answers a request ---------- */
   function actRequest(ref, ok){
@@ -5417,7 +5450,7 @@ function eventDock(id){
     if(ev){
       if(ev.role==='hosting') return;          /* hosts are going by definition */
       if(ev.rsvpBy && TODAY>ev.rsvpBy){
-        toast('RSVPs closed on '+dateLabel(ev.rsvpBy)+' — ask the host to reopen them.','err',4500);
+        toast('RSVPs closed on '+dateLabel(ev.rsvpBy)+' - ask the host to reopen them.','err',4500);
         return;
       }
       /* capacity counts guests only; the host rides on top of it */
@@ -5435,10 +5468,10 @@ function eventDock(id){
     }
     if(ev && !canJoin(ev)){
       if(myJoinRequest(ev)){
-        toast('Request sent — waiting for '+fname(ev.hostName)+' to approve.','',4500);
+        toast('Request sent - waiting for '+fname(ev.hostName)+' to approve.','',4500);
         return;
       }
-      /* the way in is claiming a spot — reopen the sheet with the answer parked */
+      /* the way in is claiming a spot - reopen the sheet with the answer parked */
       pendingRsvp={ id:id, k:k };
       modal.innerHTML=claimCard(ev); modal.hidden=false;
       document.body.classList.add('modal-open');
@@ -5454,14 +5487,14 @@ function eventDock(id){
     ['going','maybe','cant'].forEach(function(x){
       var el=document.getElementById('c-'+x); if(el) el.textContent=n[x]; });
 
-    /* remember the answer on this uid and keep the event on my list \u2014
+    /* remember the answer on this uid and keep the event on my list -
        a "can't go" still stays visible in case you change your mind */
     m.rsvp[id]=k;
     if(m.events.indexOf(id)<0) m.events.push(id);
     saveMe();
     if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant,
                       pending:(ev.counts&&ev.counts.pending)||0};
-    /* first answer: my waiting presence is absorbed by my response — the
+    /* first answer: my waiting presence is absorbed by my response - the
        curated uid-less row under my name, and my own approved-request row.
        Only rows that were counted move the pending counter (an approved
        request was; an announce-visit row never was). Live mode mirrors this
@@ -5605,7 +5638,7 @@ function eventDock(id){
   }
 
   /* ---------- removing someone (host only) ----------
-     A pending uid-less row is just an invitation — withdrawing it frees the
+     A pending uid-less row is just an invitation - withdrawing it frees the
      name. A person (any row with a visitor uid) is removed AND banned: the
      event disappears for them and their link stops working. */
   function askRemoveGuest(mg){
@@ -5613,7 +5646,7 @@ function eventDock(id){
     confirmFn=function(){ doRemoveGuest(mg); };
     modal.innerHTML=confirmCard('Remove “'+mg.name+'”?',
       mg.uid
-        ? 'They come off the guest list and the event disappears for them — their link stops working. You can invite them again later.'
+        ? 'They come off the guest list and the event disappears for them - their link stops working. You can invite them again later.'
         : 'Their invitation is withdrawn and they leave the waiting list. You can invite them again anytime.',
       mg.uid ? 'Remove guest' : 'Remove invitation');
     modal.hidden=false;
@@ -5651,7 +5684,7 @@ function eventDock(id){
 
   function closeMenu(){
     menu.hidden=true;
-    /* park it back on <body> — its last parent may be about to be re-rendered */
+    /* park it back on <body> - its last parent may be about to be re-rendered */
     if(menu.parentNode!==document.body) document.body.appendChild(menu);
     if(anchor){ anchor.setAttribute('aria-expanded','false'); anchor=null; }
   }
@@ -5668,11 +5701,11 @@ function eventDock(id){
       '<h1 class="title">Events</h1><p class="skel">Loading events\u2026</p></div>';
   }
 
-  /* Any store change — first load, a new event, an edited doc, a subcollection
-     arriving — repaints the current view in place. */
+  /* Any store change - first load, a new event, an edited doc, a subcollection
+     arriving - repaints the current view in place. */
   STORE.onChange(function(){
     var rv=route().v;
-    /* never repaint over a half-filled form — but an edit still needs the
+    /* never repaint over a half-filled form - but an edit still needs the
        first load, since it cannot open before its event exists */
     if(rv==='create'||(rv==='edit'&&EDIT)) return;
     var y=app.scrollTop;
@@ -5680,7 +5713,7 @@ function eventDock(id){
     jump(y);
   });
 
-  /* the other device keeps opening events after we linked — pull the fresh
+  /* the other device keeps opening events after we linked - pull the fresh
      union when the app boots and whenever this tab comes back into view */
   var lastSync=0;
   function syncLinks(){
@@ -5738,7 +5771,7 @@ function eventDock(id){
 
 <script type="module">
 /* =====================================================================
-   FIREBASE  —  fill in apiKey and the WEB appId below.
+   FIREBASE  -  fill in apiKey and the WEB appId below.
    Your pasted appId ended in ":ios:" which the JS SDK cannot use.
    Firebase Console -> Project settings -> General -> Your apps
      -> Add app -> Web  ->  copy apiKey + appId from that config.
@@ -5759,7 +5792,7 @@ const APP_OK = /:web:/.test(FB_CONFIG.appId || "");
 const UNSUBBED = (v) => (v || "").startsWith("__");
 
 const SDK = "https://www.gstatic.com/firebasejs/12.3.0/";
-/* Namespacing — this bucket/database already hold other data, so everything
+/* Namespacing - this bucket/database already hold other data, so everything
    this app writes lives under one prefix and nothing else is touched.
      Firestore : apps/down2chill/{events,people}/...
      Storage   : down2chill/events/{eventId}/photos/...  (event albums)
@@ -5791,8 +5824,8 @@ function dim(m){ log(m, "dim"); }
 async function initFirebase(){
   if(fb) return fb;
   if(!KEY_OK) throw new Error(UNSUBBED(FB_CONFIG.apiKey)
-    ? "apiKey is still the build placeholder — Cloudflare did not substitute it."
-    : "apiKey is blank — set FB_CONFIG.apiKey.");
+    ? "apiKey is still the build placeholder - Cloudflare did not substitute it."
+    : "apiKey is blank - set FB_CONFIG.apiKey.");
 
   const [{ initializeApp }, fs, st, au] = await Promise.all([
     import(SDK + "firebase-app.js"),
@@ -5806,7 +5839,7 @@ async function initFirebase(){
   const storage = st.getStorage(app);
   const auth    = au.getAuth(app);
 
-  // Anonymous sign-in is optional. If it's not enabled, keep going —
+  // Anonymous sign-in is optional. If it's not enabled, keep going -
   // it only matters when your rules require request.auth != null.
   let uid = null;
   try {
@@ -5814,7 +5847,7 @@ async function initFirebase(){
     uid = cred.user.uid;
     dim("signed in anonymously as " + uid.slice(0, 10) + "\u2026");
   } catch(e){
-    warn("anonymous auth unavailable (" + e.code + ") — continuing unauthenticated");
+    warn("anonymous auth unavailable (" + e.code + ") - continuing unauthenticated");
   }
 
   fb = { app, db, storage, auth, uid, fs, st };
@@ -5829,13 +5862,13 @@ function renderConn(){
     ["projectId", FB_CONFIG.projectId, !!FB_CONFIG.projectId],
     ["bucket",    FB_CONFIG.storageBucket, !!FB_CONFIG.storageBucket],
     ["apiKey",    KEY_OK ? "set \u2713"
-                  : UNSUBBED(FB_CONFIG.apiKey) ? "PLACEHOLDER — build did not substitute"
+                  : UNSUBBED(FB_CONFIG.apiKey) ? "PLACEHOLDER - build did not substitute"
                   : "MISSING", KEY_OK],
     ["appId",     APP_OK ? "web app \u2713"
-                  : UNSUBBED(FB_CONFIG.appId) ? "PLACEHOLDER — build did not substitute"
+                  : UNSUBBED(FB_CONFIG.appId) ? "PLACEHOLDER - build did not substitute"
                   : FB_CONFIG.appId ? "NOT a web appId (must contain :web:)"
                   : "MISSING", APP_OK],
-    ["origin",    location.protocol === "file:" ? "file:// — serve over http instead" : location.origin,
+    ["origin",    location.protocol === "file:" ? "file:// - serve over http instead" : location.origin,
                   location.protocol !== "file:"],
     ["firestore",  FS_ROOT.join("/") + "/events", true],
     ["storage",    PHOTO_ROOT + "/", true],
@@ -5850,7 +5883,7 @@ function renderConn(){
 function eventDoc(ev, fsId, hostFsId){
   return {
     uid: fsId,                         // Firestore's own document id, mirrored into the doc
-    slug: ev.id,                       // stable authored key — what upserts match on
+    slug: ev.id,                       // stable authored key - what upserts match on
     title: ev.title, titleLower: ev.title.toLowerCase(),
     dateISO: ev.date, time: ev.time, timeSort: t24(ev.time),
     venue: ev.venue, address: ev.address, about: ev.about,
@@ -5868,7 +5901,7 @@ function eventDoc(ev, fsId, hostFsId){
       uid: PERSON[g.id].fsId, name: pn(g.id), avatarUrl: pav(g.id), isHost: !!g.host
     })),
     photoCount: ev.photoCount, lastPhotoLabel: ev.photoWhen,
-    /* Chat is an array on the event document — realtime via the event
+    /* Chat is an array on the event document - realtime via the event
        listener, no extra subcollection or listener needed. */
     chatMessages: ev.thread.map(m => ({
       fromUid: PERSON[m.from].fsId || "", fromName: pn(m.from), fromAvatarUrl: pav(m.from),
@@ -5948,7 +5981,7 @@ async function seed(){
       });
 
     /* photos / activity / messages have no natural key, so they get pure
-       auto-ids. Clear the previously seeded ones first — uploads are kept. */
+       auto-ids. Clear the previously seeded ones first - uploads are kept. */
     for(const sub of ["photos", "activity", "messages"]){   // "messages" clears the old subcollection
       const existing = await getDocs(query(collection(evRef, sub), where("source", "==", "seed")));
       for(const d of existing.docs) await drop(d.ref);
@@ -5960,7 +5993,7 @@ async function seed(){
         eventUid: ev.fsId, path: "", url: IMG(ph.seed, 1400, 1400), thumbUrl: IMG(ph.seed, 600, 600),
         byUid: PERSON[ph.byId].fsId, byName: pn(ph.byId), byAvatarUrl: pav(ph.byId),
         whenLabel: ph.when,
-        /* sort key is DESCENDING — highest is newest. Seeds count down from the
+        /* sort key is DESCENDING - highest is newest. Seeds count down from the
            list length; uploads use Date.now(), which always outranks them.   */
         order: ev.allPhotos.length - i, source: "seed"
       });
@@ -5970,14 +6003,14 @@ async function seed(){
       await put(doc(collection(evRef, "activity")), {
         eventUid: ev.fsId, personUid: PERSON[a.id].fsId, personName: pn(a.id),
         icon: a.ic, isCheck: !!a.ok, text: a.txt, whenLabel: a.t,
-        /* descending like photos — authored order is newest first */
+        /* descending like photos - authored order is newest first */
         order: ev.activity.length - i, source: "seed"
       });
     }
   }
 
   await flush(true);
-  ok("seeded " + SEED_EVENTS.length + " events \u2014 " + total + " writes, all ids from Firestore");
+  ok("seeded " + SEED_EVENTS.length + " events - " + total + " writes, all ids from Firestore");
   if(STORE.mode !== "live") await connectLive();
   dim("pool-party document id = " + SEED_BY_ID["pool-party"].fsId);
   const sel = document.getElementById("fb-ev");
@@ -5995,11 +6028,11 @@ function meIdent(){
 async function uploadPhoto(evId, file, say){
   say = say || dim;
   const { db, storage, fs, st } = await initFirebase();
-  if(!evId) throw new Error("No event id — run step 1 first.");
+  if(!evId) throw new Error("No event id - run step 1 first.");
   if(!file) throw new Error("Choose an image file first.");
   if(!/^image\//.test(file.type)) throw new Error("That file isn\u2019t an image.");
   if(file.size > 25 * 1024 * 1024)
-    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB \u2014 the limit is 25 MB.");
+    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB - the limit is 25 MB.");
 
   const safe = file.name.replace(/[^\w.\-]+/g, "_");
   const path = PHOTO_ROOT + "/" + evId + "/photos/" + Date.now() + "_" + safe;
@@ -6029,7 +6062,7 @@ async function upload(){
   const local = SEED_BY_ID[sel.selectedOptions[0].dataset.local];
   const evId  = local && local.fsId ? local.fsId : sel.value;
   if(!local || !local.fsId)
-    throw new Error("Run step 1 first \u2014 the event has no Firestore id yet in this session.");
+    throw new Error("Run step 1 first - the event has no Firestore id yet in this session.");
 
   const r = await uploadPhoto(evId, input.files && input.files[0]);
   ok("uploaded to Storage");
@@ -6069,13 +6102,13 @@ async function testReads(){
   const { db, storage, fs, st } = await initFirebase();
   let pass = 0, fail = 0;
   const step = async (label, fn) => {
-    try { const r = await fn(); ok(label + (r ? " \u2014 " + r : "")); pass++; }
-    catch(e){ err(label + " \u2014 " + (e.code || "") + " " + e.message); fail++; }
+    try { const r = await fn(); ok(label + (r ? " - " + r : "")); pass++; }
+    catch(e){ err(label + " - " + (e.code || "") + " " + e.message); fail++; }
   };
 
   await step("Firestore: list events", async () => {
     const snap = await fs.getDocs(fs.query(fs.collection(db, ...FS_ROOT, "events"), fs.limit(50)));
-    if(snap.empty) throw new Error("collection is empty — run step 1 first");
+    if(snap.empty) throw new Error("collection is empty - run step 1 first");
     return snap.size + " docs (" + snap.docs.slice(0, 3).map(d => d.data().title).join(", ") + "\u2026)";
   });
 
@@ -6099,7 +6132,7 @@ async function testReads(){
     return snap.size + " guest docs";
   });
 
-  // The app never crawls the bucket — it reads a path from Firestore and resolves it.
+  // The app never crawls the bucket - it reads a path from Firestore and resolves it.
   // That is what we test here; a listAll() is only a coarse extra diagnostic.
   let firstUrl = null, firstPath = null;
 
@@ -6109,7 +6142,7 @@ async function testReads(){
     const snap = await fs.getDocs(fs.query(
       fs.collection(db, ...FS_ROOT, "events", id, "photos"),
       fs.where("source", "==", "upload"), fs.limit(1)));
-    if(snap.empty) throw new Error("no uploaded photos on Pool Party yet — run step 2 first");
+    if(snap.empty) throw new Error("no uploaded photos on Pool Party yet - run step 2 first");
     const d = snap.docs[0].data();
     firstPath = d.path; firstUrl = d.url;
     return d.path;
@@ -6134,7 +6167,7 @@ async function testReads(){
   });
 
   log("");
-  (fail ? warn : ok)("read tests finished — " + pass + " passed, " + fail + " failed");
+  (fail ? warn : ok)("read tests finished - " + pass + " passed, " + fail + " failed");
 }
 
 /* ---------------- 4. create an event ---------------- */
@@ -6145,7 +6178,7 @@ async function uploadCover(file, onProgress){
   if(!file) throw new Error("Choose an image first.");
   if(!/^image\//.test(file.type)) throw new Error("That file isn\u2019t an image.");
   if(file.size > 25 * 1024 * 1024)
-    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB \u2014 the limit is 25 MB.");
+    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB - the limit is 25 MB.");
 
   const safe = file.name.replace(/[^\w.\-]+/g, "_");
   const path = COVER_ROOT + "/" + Date.now() + "_" + safe;
@@ -6216,7 +6249,7 @@ async function deleteFile(path){
   try {
     const { storage, st } = await initFirebase();
     await st.deleteObject(st.ref(storage, path));
-  } catch(e){ /* already gone, or rules said no — either way not fatal */ }
+  } catch(e){ /* already gone, or rules said no - either way not fatal */ }
 }
 
 async function updateEvent(id, patch){
@@ -6242,7 +6275,7 @@ async function deleteEvent(id){
   }
   await fs.deleteDoc(evRef);
 
-  /* Storage doesn't cascade either — the event's album and chat pictures */
+  /* Storage doesn't cascade either - the event's album and chat pictures */
   await wipeFolder(PHOTO_ROOT + "/" + id);
   await wipeFolder(CHAT_ROOT + "/" + id);
 
@@ -6277,7 +6310,7 @@ async function setPlus(eventId, n){
   const me = meIdent();
   const patch = { uid: me.fsId || "", name: me.name, avatarUrl: me.av, plus: n };
   /* the host never RSVPs, so their first +1 write must stand alone as a
-     complete going row — a bare {plus} doc is invisible to the status split */
+     complete going row - a bare {plus} doc is invisible to the status split */
   if(!(window.myRsvp && myRsvp(eventId)))
     Object.assign(patch, { status: "going", isHost: true, message: "",
                            invitedLabel: "Hosting", order: Date.now(), source: "plus" });
@@ -6307,7 +6340,7 @@ const RSVP_ACT = {
 };
 
 /* ---------------- any member invites more people ----------------
-   Each name becomes a pending guest doc with no visitor uid — exactly the
+   Each name becomes a pending guest doc with no visitor uid - exactly the
    shape the claim sheet reads, so the invitee finds their name waiting. */
 async function inviteGuests(eventId, list){
   const { db, fs } = await initFirebase();
@@ -6338,7 +6371,7 @@ async function removeGuest(eventId, name){
 }
 
 /* ---------------- the approval pipeline ----------------
-   A request is a guests doc with status "request" — never counted, never
+   A request is a guests doc with status "request" - never counted, never
    shown in the guest lists, only in the host's Requests card. Approving
    turns it into a real pending row; declining deletes it. */
 async function requestJoin(eventId, name){
@@ -6461,7 +6494,7 @@ async function setRsvp(eventId, status, prev, wasReq){
 }
 
 /* The host-typed pending doc and the visitor's own uid-keyed response are the
-   same person once the name is claimed — the response wins, the curated row
+   same person once the name is claimed - the response wins, the curated row
    (uid-less, so never someone's live doc) goes, and the counter follows. */
 async function absorbPending(eventId, name, keepId){
   const { db, fs } = await initFirebase();
@@ -6492,8 +6525,8 @@ let unsubEvents = null, unsubDetail = [], watchingId = null;
 async function connectLive(){
   if(!KEY_OK){
     useLocalData(UNSUBBED(FB_CONFIG.apiKey)
-      ? "Build placeholder not substituted — showing bundled sample data."
-      : "Firebase not configured — showing bundled sample data.");
+      ? "Build placeholder not substituted - showing bundled sample data."
+      : "Firebase not configured - showing bundled sample data.");
     return;
   }
   if(unsubEvents){ try{ unsubEvents(); }catch(e){} unsubEvents = null; }
@@ -6544,7 +6577,7 @@ async function watchDetail(id){
     })}), e => err("photos: " + e.code)));
 
   /* order desc: seeds count down from the list length, app entries use
-     Date.now(), so the newest is always first \u2014 same scheme as photos. */
+     Date.now(), so the newest is always first - same scheme as photos. */
   unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "activity"), fs.orderBy("order", "desc")),
     snap => STORE.setDetail(id, { activity: snap.docs.map(d => {
       const a = d.data();
@@ -6552,7 +6585,7 @@ async function watchDetail(id){
                icon: a.icon || "check", isCheck: !!a.isCheck, text: a.text || "",
                whenLabel: a.whenLabel || "",
                /* docs from before `at` existed still carry their ms epoch in
-                  order \u2014 derive the time instead of a frozen "Just now" */
+                  order - derive the time instead of a frozen "Just now" */
                at: a.at || (a.order > 1e12 ? new Date(a.order).toISOString() : ""),
                quote: /^[\u201C"]/.test(a.text || "") };
     })}), e => err("activity: " + e.code)));
@@ -6589,7 +6622,7 @@ async function sendImage(eventId, file){
   if(!file) throw new Error("Choose an image file first.");
   if(!/^image\//.test(file.type)) throw new Error("That file isn’t an image.");
   if(file.size > 25 * 1024 * 1024)
-    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB — the limit is 25 MB.");
+    throw new Error("File is " + (file.size/1048576).toFixed(1) + " MB - the limit is 25 MB.");
 
   const safe = file.name.replace(/[^\w.\-]+/g, "_");
   const path = CHAT_ROOT + "/" + eventId + "/" + Date.now() + "_" + safe;
@@ -6625,7 +6658,7 @@ function run(btn, label, fn){
   btn.disabled = true; btn.textContent = label;
   Promise.resolve()
     .then(fn)
-    .catch(e => { err((e.code ? e.code + " — " : "") + e.message); console.error(e); })
+    .catch(e => { err((e.code ? e.code + " - " : "") + e.message); console.error(e); })
     .finally(() => { btn.disabled = false; btn.textContent = old; });
 }
 
