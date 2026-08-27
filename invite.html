@@ -659,7 +659,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .waddr::placeholder{color:var(--muted-2)}
 
 /* vibe picker */
-.vibes{display:grid;grid-template-columns:repeat(6,1fr);gap:clamp(6px,2.3vw,15px)}
+.vibes{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,2.3vw,15px)}
 .vibe{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0}
 .vtile{position:relative;width:100%;max-width:78px;aspect-ratio:1;border-radius:20px;
   display:grid;place-items:center;transition:transform .16s,box-shadow .16s}
@@ -672,6 +672,12 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .vibe>span{color:var(--muted)}
 .vibe[aria-pressed="true"] .vtile{box-shadow:0 6px 16px -7px rgba(30,30,110,.45)}
 .vibe[aria-pressed="true"]>span{color:var(--ink)}
+/* event-page vibe display — same tiles, read-only, sized to sit with the chips */
+.vibe-show{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0 2px}
+.vibe-show .vibe{width:62px;gap:6px}
+.vibe-show .vtile{border-radius:16px}
+.vibe-show .vibe:hover .vtile{transform:none}
+.vibe-show .vibe>span:last-child{font-size:12px;color:var(--ink-soft)}
 
 /* settings rows */
 .scard{background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);padding:0 16px;
@@ -727,6 +733,9 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .stepper button:hover{background:var(--soft)}
 .stepper svg.i{width:21px;height:21px;stroke-width:2.4}
 .stepper b{flex:1;text-align:center;font:700 20px/1 var(--disp);color:var(--primary)}
+.stepper input{flex:1;min-width:0;width:100%;text-align:center;font:700 20px/1 var(--disp);
+  color:var(--primary);border:0;background:none;outline:0;-moz-appearance:textfield;appearance:textfield}
+.stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .datebox{margin-top:14px}
 .sec3 .tawrap{margin-top:12px}
 .sec3 .tawrap .inp{height:56px;padding-right:74px}
@@ -1048,7 +1057,7 @@ button.view-all{display:block;width:100%;text-align:center}
   .sic{width:44px;height:44px;border-radius:13px}
   .sval{max-width:54%}
   .cbar-in{gap:12px}
-  .vibes{gap:6px}
+  .vibes{grid-template-columns:repeat(4,1fr);gap:6px}
   .vtile{border-radius:16px}
 }
 @media (max-width:380px){
@@ -2023,6 +2032,18 @@ function renderCalendar(){
 }
 
 /* ================= EVENT DETAIL ================= */
+/* the event's vibes as picker-style tiles — a seeded event only stores a text
+   label, which still gets a tile when it names a known vibe */
+function vibeShow(ev){
+  var keys=(ev.vibes && ev.vibes.length ? ev.vibes : [ev.vibe])
+    .filter(function(k){ return VIBE_BY[k]; });
+  if(!keys.length) return '';
+  return '<div class="vibe-show">'+keys.map(function(k){
+    var v=VIBE_BY[k];
+    return '<span class="vibe"><span class="vtile" style="background:'+v.bg+';color:'+v.fg+'">'+
+      '<svg aria-hidden="true"><use href="#'+v.ic+'"/></svg></span><span>'+h(v.k)+'</span></span>';
+  }).join('')+'</div>';
+}
 function renderEvent(id){
   var ev=findEvent(id); if(!ev) return renderHome();
   var dp=dparts(ev.dateISO), c=ev.counts;
@@ -2095,6 +2116,7 @@ function renderEvent(id){
       '</section>'+
       '<section class="sec"><div class="sec-h"><h2>About</h2></div>'+
         '<p class="about">'+h(ev.about)+'</p>'+
+        vibeShow(ev)+
         '<div class="chips">'+chipsFor(ev).map(function(x){
           return '<div class="chip">'+ico(x[0])+h(x[1])+'</div>'; }).join('')+'</div>'+
       '</section>'+
@@ -2485,7 +2507,7 @@ function blankDraft(){
   var start = addDays(isoOf(new Date()), 7);
   return { draftId:'', title:'', coverUrl:'', coverPath:'',
            date:start, time:'7:00 PM', endTime:null,
-           venue:'', address:'', about:'', vibes:[], vibeMore:false,
+           venue:'', address:'', about:'', vibes:[],
            /* step 3 */
            capMode:'custom', capacity:30,
            invite:'Invite Only',
@@ -2651,18 +2673,14 @@ function renderCreate1(){
 
 /* ---------- step 2 ---------- */
 function vibeGrid(d){
-  var list = d.vibeMore ? VIBES : VIBES.slice(0, 5);
-  var s = list.map(function(v){
+  /* every vibe up front — no "More" fold */
+  return '<div class="vibes">' + VIBES.map(function(v){
     var on = d.vibes.indexOf(v.k) > -1, c = on ? v : VIBE_OFF;
     return '<button class="vibe" type="button" data-vibe="' + h(v.k) + '" aria-pressed="' + on + '">' +
         '<span class="vtile" style="background:' + c.bg + ';color:' + c.fg + '">' +
           '<svg aria-hidden="true"><use href="#' + v.ic + '"/></svg>' +
         '</span><span>' + h(v.k) + '</span></button>';
-  }).join('');
-  if(!d.vibeMore)
-    s += '<button class="vibe" type="button" data-vibemore aria-label="Show more vibes">' +
-      '<span class="vtile more">' + ico('more') + '</span><span>More</span></button>';
-  return '<div class="vibes">' + s + '</div>';
+  }).join('') + '</div>';
 }
 function renderCreate2(){
   var d = loadDraft();
@@ -2766,10 +2784,14 @@ function optRow(field, val, on, title, sub, icon){
       (on ? '<span class="ock">' + ico('tick') + '</span>' : '') +
     '</button>';
 }
-function stepper(field, val){
+function stepper(field, val, edit){
+  /* edit = [min,max] makes the count a real number input, not just a label */
   return '<div class="stepper">' +
       '<button type="button" data-dec="' + field + '" aria-label="Decrease">' + ico('minus') + '</button>' +
-      '<b>' + val + '</b>' +
+      (edit
+        ? '<input type="number" inputmode="numeric" data-step="' + field + '" value="' + val +
+            '" min="' + edit[0] + '" max="' + edit[1] + '" aria-label="Exact number">'
+        : '<b>' + val + '</b>') +
       '<button type="button" data-inc="' + field + '" aria-label="Increase">' + ico('plus') + '</button>' +
     '</div>';
 }
@@ -2796,7 +2818,8 @@ function cardCapacity(d){
       optRow('capMode','custom',    d.capMode === 'custom',    'Custom',    'Set a maximum number of guests.') +
     '</div>' +
     (d.capMode === 'custom'
-      ? stepper('capacity', d.capacity) +
+      ? stepper('capacity', d.capacity, [2, 500]) +
+        '<p class="onote">Tap the number to type an exact limit.</p>' +
         '<p class="onote">The host and co-hosts do not count toward capacity.</p>' +
         '<p class="onote">Suggested range: 2\u2013500 guests.</p>'
       : ''));
@@ -4211,7 +4234,6 @@ function eventDock(id){
       saveDraft(); repaintWhen(); return;
     }
     if(t.closest('[data-endtime-off]')){ loadDraft().endTime=null; saveDraft(); repaintWhen(); return; }
-    if(t.closest('[data-vibemore]')){ loadDraft().vibeMore=true; saveDraft(); repaintVibes(); return; }
     var vb=t.closest('[data-vibe]');
     if(vb){
       var vd=loadDraft(), at=vd.vibes.indexOf(vb.dataset.vibe);
@@ -4380,6 +4402,15 @@ function eventDock(id){
       if(e.target.value.indexOf(',')>-1) commitInvite(false);
       return;
     }
+    if(e.target.getAttribute && e.target.getAttribute('data-step')==='capacity'){
+      var cd2=loadDraft(), cn=parseInt(e.target.value,10);
+      cd2.capMode='custom';
+      if(!isNaN(cn)) cd2.capacity=Math.max(2,Math.min(500,cn));
+      saveDraft();
+      var chd=e.target.closest('.sec3'), csv=chd&&chd.querySelector('.sval');
+      if(csv) csv.textContent=capLabel(cd2);
+      return;
+    }
     if(e.target.id==='q-invite'){
       inviteQ=e.target.value;
       var gl=document.getElementById('g-list');
@@ -4399,6 +4430,13 @@ function eventDock(id){
   /* ---------- create form: native pickers ---------- */
   document.addEventListener('change',function(e){
     var t=e.target, d=loadDraft(), lab;
+    /* leaving the capacity field snaps it into range and repaints the card */
+    if(t.getAttribute && t.getAttribute('data-step')==='capacity'){
+      var cv=parseInt(t.value,10);
+      d.capMode='custom';
+      if(!isNaN(cv)) d.capacity=Math.max(2,Math.min(500,cv));
+      saveDraft(); repaintStep3(); return;
+    }
     if(t.id==='c-rsvp'){ d.rsvpBy=t.value; d.rsvpMode='custom'; d.rsvpTouched=true;
                          saveDraft(); repaintStep3(); return; }
     if(t.id==='c-rsvp2'){ d.rsvpBy=t.value; d.rsvpMode='custom'; d.rsvpTouched=true;
