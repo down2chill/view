@@ -1293,7 +1293,7 @@ var SEED_EVENTS = [
   {
     id:"study-break", fsId:null, title:'Study Break', date:'2021-08-06', time:'2:00 PM',
     venue:'Campus Library', address:'400 University Ave, Redding, CA 96001',
-    hostId:"andrew", role:'invited', dot:VIOLET, img:'studybreak', map:'librarymap',
+    hostId:"andrew", role:'invited', vis:'public', dot:VIOLET, img:'studybreak', map:'librarymap',
     going:8, maybe:3, cant:1, pending:5,
     about:'Midterms are brutal, so we\u2019re taking ninety minutes off. Coffee and pastries on the third floor lounge. Laptops stay closed.',
     vibe:'Low key', capacity:'20 guests', entry:'Free', invite:'Anyone with the link',
@@ -1651,7 +1651,26 @@ function saveMe(){
 }
 loadMe();
 
-function findEvent(key){ return STORE.byId[key] || null; }
+/* ---- who-can-join ladder ----
+   One setting, four rungs. New docs store it as `join`; older docs derive it
+   from the legacy visibility/invite pair so nothing needs migrating. */
+function joinMode(ev){
+  if(ev.join) return ev.join;
+  if(ev.visibilityMode === 'public')  return 'public';
+  if(ev.visibilityMode === 'invited') return 'private';
+  return /^invite only$/i.test(ev.inviteType || '') ? 'guests' : 'open';
+}
+/* an uninvited (banned) viewer: the event simply no longer exists for them */
+function isBanned(ev){
+  var b = ev.banned || [];
+  if(!b.length) return false;
+  var uids = myUids();
+  return b.some(function(u){ return uids.indexOf(u) > -1; });
+}
+function findEvent(key){
+  var ev = STORE.byId[key] || null;
+  return (ev && isBanned(ev)) ? null : ev;
+}
 
 /* ---------- time ---------- */
 function ago(isoTs){
@@ -1678,11 +1697,12 @@ function msgFrom(m){
 
 /* ---------- mapping ---------- */
 function chipsFor(ev){
+  var j = joinOpt(joinMode(ev));
   return [
     ["sun",   ev.vibe],
     ["users", ev.capacity === "Unlimited" ? "No guest limit" : ev.capacity + " max"],
     ["money", ev.entry],
-    [/^invite only$/i.test(ev.inviteType) ? "lock" : "globe", ev.inviteType]
+    [j.ic, j.lab]
   ];
 }
 
@@ -1699,6 +1719,7 @@ function docToModel(id, d){
     capacity: d.capacity || "\u2014", capacityMode: d.capacityMode || "", capacityMax: d.capacityMax || 0,
     entry: d.entry || "\u2014", entryMode: d.entryMode || "", entryNote: d.entryNote || "",
     inviteType: d.inviteType || "Invite only",
+    join: d.join || "", banned: d.banned || [],
     /* step-3 settings ride along so both data modes keep every field */
     plusOnes: d.plusOnes || "", plusOnesMode: d.plusOnesMode || "", plusOnesMax: d.plusOnesMax || 0,
     invitedUids: d.invitedUids || [], invitedGuests: d.invitedGuests || [],
@@ -1721,7 +1742,8 @@ function docToModel(id, d){
        free and need no extra listener. */
     messages: (d.chatMessages || []).map(msgFrom),
     chatUnread: d.chatUnread || 0,
-    guests: null, waiting: null, maybes: null, cants: null, photos: null, activity: null
+    guests: null, waiting: null, maybes: null, cants: null, photos: null, activity: null,
+    requests: null
   };
 }
 
@@ -1732,6 +1754,9 @@ function seedToModel(ev){
     title: ev.title, dateISO: ev.date, time: ev.time, timeSort: t24(ev.time),
     venue: ev.venue, address: ev.address, about: ev.about,
     vibe: ev.vibe, capacity: ev.capacity, entry: ev.entry, inviteType: ev.invite,
+    join: ev.vis === 'public' ? 'public'
+        : /^invite only$/i.test(ev.invite || '') ? 'guests' : 'open',
+    banned: [],
     dot: ev.dot, role: 'invited',
     coverUrl: IMG(ev.img, 1000, 1250), thumbUrl: IMG(ev.img, 400, 440), mapUrl: IMG(ev.map, 1200, 675),
     hostName: pn(ev.hostId), hostAvatarUrl: pav(ev.hostId),
@@ -1745,6 +1770,7 @@ function seedToModel(ev){
                isYou: m.from === "emily" }; }),
     chatUnread: ev.chat.unread || 0,
     guests: null, waiting: null, maybes: null, cants: null, photos: null, activity: null,
+    requests: null,
     _seed: ev
   };
 }
@@ -1770,7 +1796,8 @@ function seedDetail(ev){
                byName: pn(p.byId), byAvatarUrl: pav(p.byId), whenLabel: p.when }; }),
     activity: s.activity.map(function(a){
       return { personName: pn(a.id), personAvatarUrl: pav(a.id), icon: a.ic,
-               isCheck: !!a.ok, text: a.txt, whenLabel: a.t, quote: !!a.quote }; })
+               isCheck: !!a.ok, text: a.txt, whenLabel: a.t, quote: !!a.quote }; }),
+    requests: []
   };
 }
 
@@ -1856,6 +1883,7 @@ function unseenCount(ev){
    opened it by direct link (any RSVP counts — a "can't go" stays visible so
    you can change your mind). Everything else stays invisible. */
 function inMyList(ev){
+  if(isBanned(ev)) return false;
   if(ev.role === 'hosting') return true;
   var ids = myEvents();
   return ids.indexOf(ev.id) > -1 || (ev.slug && ids.indexOf(ev.slug) > -1);
@@ -1869,6 +1897,13 @@ function upcoming(){ return mineOnly(STORE.events.filter(function(e){ return e.d
 function past(){ return mineOnly(STORE.events.filter(function(e){ return e.dateISO < TODAY; }))
   .slice().reverse(); }
 function hosting(){ return mineOnly(STORE.events.filter(function(e){ return e.role === "hosting"; })); }
+/* public events for anyone visiting the site — the Discover rail */
+function discover(q){
+  return shown(STORE.events.filter(function(e){
+    return joinMode(e) === 'public' && e.dateISO >= TODAY && !isBanned(e) &&
+           !inMyList(e) && matches(e, q);
+  }));
+}
 </script>
 <script>
 /* ================= tiny helpers ================= */
@@ -1907,6 +1942,7 @@ function statusPill(ev){
   if(r==='going') return '<span class="pill host">Going</span>';
   if(r==='maybe') return '<span class="pill inv">Maybe</span>';
   if(r==='cant')  return '<span class="pill went">Can\u2019t go</span>';
+  if(joinMode(ev)==='public' && !inMyList(ev)) return '<span class="pill inv">Public</span>';
   return '<span class="pill inv">Invited</span>';
 }
 
@@ -1980,10 +2016,18 @@ function homeList(tab,q){
     if(ds.length) dr='<h3 class="mon-h">Drafts</h3><div class="ecards">'+
       ds.map(draftCard).join('')+'</div>';
   }
+  /* public events surface for everyone, below whatever is theirs */
+  var disc='';
+  if(tab==='upcoming'){
+    var pub=discover(q);
+    if(pub.length) disc='<h3 class="mon-h">Discover</h3><div class="ecards">'+
+      pub.map(eventCard).join('')+'</div>';
+  }
   if(!list.length){
-    if(dr) return dr + foot;
-    return (q ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
-              : '<p class="empty">Nothing here yet. Open an event link someone sent you and it\u2019ll appear on this page.</p>') + foot;
+    if(dr) return dr + disc + foot;
+    return (q && !disc ? '<p class="no-hit">No events match <b>\u201C'+h(q)+'\u201D</b>.</p>'
+         : q ? disc
+         : '<p class="empty">Nothing here yet. Open an event link someone sent you and it\u2019ll appear on this page.</p>' + disc) + foot;
   }
   var body='',open=false;
   groupByMonth(list).forEach(function(row){
@@ -1991,7 +2035,7 @@ function homeList(tab,q){
     else body+=eventCard(row.ev);
   });
   if(open) body+='</div>';
-  return dr + body + foot;
+  return dr + body + disc + foot;
 }
 
 function renderHome(tab,q,open){
@@ -2208,6 +2252,13 @@ function renderEvent(id){
           '<p class="note">You\u2019re hosting, so you\u2019re already counted in.</p>'+
           '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
         '</section>'
+        : myJoinRequest(ev)
+        /* asked to join, not approved yet \u2014 no buttons until the host says so */
+        ? '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
+          '<p class="tally">Request sent</p>'+
+          '<p class="note">'+h(fname(ev.hostName))+' will approve your request to join \u2014 '+
+            'you can RSVP as soon as that happens.</p>'+
+        '</section>'
         : '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
           '<div class="rsvp" id="rsvp" data-going="'+c.going+'" data-maybe="'+c.maybe+'" data-cant="'+c.cant+'">'+
             '<button type="button" data-k="going" aria-pressed="'+(myRsvp(ev.id)==='going')+'">'+ico('check')+'Going</button>'+
@@ -2226,7 +2277,11 @@ function renderEvent(id){
           return '<div class="chip">'+ico(x[0])+h(x[1])+'</div>'; }).join('')+'</div>'+
       '</section>'+
     '</div><div class="colB">'+
-      '<section class="sec"><div class="sec-h"><h2><a href="#guests/'+ev.id+'" data-nav>Guests</a></h2></div>'+
+      '<section class="sec"><div class="sec-h"><h2><a href="#guests/'+ev.id+'" data-nav>Guests</a></h2>'+
+        (ev.role==='hosting' && (ev.requests||[]).length
+          ? '<a class="link" href="#guests/'+ev.id+'" data-nav>Requests ('+ev.requests.length+')</a>'
+          : '')+
+      '</div>'+
         '<div class="guests">'+
           gs.map(function(g){
             return '<a class="guest" href="#guests/'+ev.id+'" data-nav>'+img(g.avatarUrl,'')+
@@ -2264,7 +2319,8 @@ function renderEvent(id){
       '<section class="sec"><div class="details"><h3>Event details</h3>'+
         '<div class="drow2">'+ico('users')+'<span>Maximum capacity</span><b>'+h(ev.capacity)+'</b></div>'+
         '<div class="drow2">'+ico('money')+'<span>Entry</span><b>'+h(ev.entry)+'</b></div>'+
-        '<div class="drow2">'+ico('lock')+'<span>Invite type</span><b>'+h(ev.inviteType)+'</b></div>'+
+        '<div class="drow2">'+ico(joinOpt(joinMode(ev)).ic)+'<span>Who can join</span><b>'+
+          h(joinOpt(joinMode(ev)).lab)+'</b></div>'+
         '<div class="drow2">'+img(ev.hostAvatarUrl,'')+'<span>Hosted by</span><b>'+
           h(fname(ev.hostName))+'</b></div>'+
       '</div></section>'+
@@ -2306,7 +2362,9 @@ function guestBuckets(ev){
         return false;
       });
     });
-  } else if(myName && ev.role !== 'hosting'){
+  } else if(myName && ev.role !== 'hosting' && canJoin(ev)){
+    /* canJoin keeps un-approved requesters out of every list — a request
+       shows nowhere until the host approves it */
     ['going','maybe','cant','waiting'].forEach(function(k){
       b[k] = b[k].filter(function(g){ return !mine(g); });
     });
@@ -2340,24 +2398,41 @@ function renderGuests(id){
   var responses=c.going+c.maybe+c.cant, invites=responses+c.pending;
   var pct=invites?Math.round(responses/invites*100):0;
 
+  /* the host can manage every row (except their own): pending rows lose the
+     invitation, claimed/answered rows are removed AND banned from the event */
+  function rowDots(g){
+    if(ev.role!=='hosting' || g.isHost) return '';
+    return '<button class="dots" type="button" data-gdots="'+h(g.name)+'" data-gduid="'+h(g.uid||'')+
+      '" data-gstat="'+h(g.status||'')+'" aria-haspopup="true" aria-expanded="false" '+
+      'aria-label="Options for '+h(g.name)+'">'+ico('more')+'</button>';
+  }
   function goingRow(g){
     return '<div class="g-row"><span class="g-av on">'+img(g.avatarUrl,'')+'</span>'+
       '<div class="g-txt"><div class="g-name"><b>'+h(g.name)+'</b>'+
         (g.isHost?'<span class="tag">Host</span>':'')+
         (g.plus?'<span class="tag">+'+g.plus+'</span>':'')+'</div>'+
         (g.message?'<p>'+h(g.message)+'</p>':'')+'<small>'+h(g.invitedLabel)+'</small></div>'+
-      '<span class="g-end">'+(g.isYou?'<em>You</em>':'')+ico('chev')+'</span></div>';
+      '<span class="g-end">'+(g.isYou?'<em>You</em>':'')+(rowDots(g)||ico('chev'))+'</span></div>';
   }
   function waitRow(g){
-    /* only the host manages invitations, so only the host gets the menu */
+    var d8=rowDots(g);
     return '<div class="g-row"><span class="g-av">'+img(g.avatarUrl,'')+'</span>'+
       '<div class="g-txt"><div class="g-name"><b>'+h(g.name)+'</b></div>'+
         '<small>'+h(g.invitedLabel)+'</small></div>'+
-      (ev.role==='hosting'
-        ? '<span class="g-end"><button class="dots" type="button" data-gdots="'+h(g.name)+
-          '" aria-haspopup="true" aria-expanded="false" aria-label="Options for '+h(g.name)+'">'+
-          ico('more')+'</button></span>'
-        : '')+'</div>';
+      (d8?'<span class="g-end">'+d8+'</span>':'')+'</div>';
+  }
+  function reqRow(r, i){
+    return '<div class="g-row"><span class="g-av">'+img(r.avatarUrl||GAV,'')+'</span>'+
+      '<div class="g-txt"><div class="g-name"><b>'+h(r.name)+'</b></div>'+
+        '<small>'+(r.reqType==='invite'
+          ? 'Suggested by '+h(r.byName||'a guest') : 'Wants to join')+
+        (r.phone?' · '+h(r.phone):'')+'</small></div>'+
+      '<span class="g-end">'+
+        '<button class="gadd" type="button" data-rok="'+h(String(r.docId||i))+
+          '" aria-label="Approve '+h(r.name)+'">'+ico('tick')+'</button>'+
+        '<button class="gdel" type="button" data-rno="'+h(String(r.docId||i))+
+          '" aria-label="Decline '+h(r.name)+'">'+ico('x2')+'</button>'+
+      '</span></div>';
   }
 
   function section(key, label, rows, rowFn, sub){
@@ -2371,6 +2446,12 @@ function renderGuests(id){
         : '')+
     '</section>';
   }
+  var reqs=(ev.role==='hosting') ? (ev.requests||[]) : [];
+  var reqCard = reqs.length
+    ? '<section class="lcard"><h2>Requests ('+reqs.length+')</h2>'+
+      '<p class="sub">Approve to add them to the guest list \u2014 until then they\u2019re invisible to guests.</p>'+
+      reqs.map(reqRow).join('')+'</section>'
+    : '';
   var lists = b
     ? section('going', 'Going', b.going, goingRow)+
       section('maybe', 'Maybe', b.maybe, goingRow)+
@@ -2401,9 +2482,13 @@ function renderGuests(id){
       '<i style="width:'+pct+'%"></i></div>'+
     '<p>'+invites+' invitations &nbsp;\u00B7&nbsp; '+responses+' responses</p></div>'+
     '<button class="cta" type="button" data-invite="'+ev.id+'">'+ico('user-plus')+'Invite More Friends</button>'+
+    reqCard+
     lists+
     '<section class="slink"><div class="slink-top"><div><h2>Share Event Link</h2>'+
-      '<p>Anyone with the link can request an invitation.</p></div>'+
+      '<p>'+(joinMode(ev)==='public' ? 'Anyone can find this public event and join.'
+           : joinMode(ev)==='open' ? 'Anyone with the link can join.'
+           : joinMode(ev)==='guests' ? 'Anyone with the link can claim an invited name — or ask to join.'
+           : 'Invited names only — join requests go to '+h(fname(ev.hostName))+'.')+'</p></div>'+
       '<button class="ghost" type="button" data-share-kind="event" data-share-id="'+ev.id+'">'+
         ico('link')+'Copy Link</button></div>'+
       /* parked until the backend can rotate links — unhide when it can */
@@ -2619,23 +2704,42 @@ function resumeEventDraft(id){
   return true;
 }
 
+/* the settings of the last event this device created — new drafts start
+   from them, so a repeat host never re-picks the same choices */
+var LAST_KEY = 'd2c.lastset.v1';
+function lastSettings(){
+  try{ return JSON.parse(localStorage.getItem(LAST_KEY) || 'null'); }catch(e){ return null; }
+}
+function rememberSettings(d){
+  try{
+    localStorage.setItem(LAST_KEY, JSON.stringify({
+      join:d.join, capMode:d.capMode, capacity:d.capacity,
+      plusMode:d.plusMode, plusN:d.plusN, rsvpMode:d.rsvpMode,
+      entryMode:d.entryMode, entryNote:d.entryNote,
+      reminders:d.reminders, remN:d.remN, remUnit:d.remUnit,
+      notifyChanges:d.notifyChanges }));
+  }catch(e){}
+}
 function blankDraft(){
   /* the real clock, not the mock TODAY — one week out, 7pm */
   var start = addDays(isoOf(new Date()), 7);
-  return { draftId:'', title:'', coverUrl:'', coverPath:'',
+  var d = { draftId:'', title:'', coverUrl:'', coverPath:'',
            date:start, time:'7:00 PM', endTime:null,
            venue:'', address:'', about:'', vibes:[],
-           /* step 3 */
+           /* step 3 — 'open' is the first-time default */
            capMode:'custom', capacity:30,
-           invite:'Invite Only',
+           join:'open',
            plusMode:'one', plusN:2,
            /* same day as the event until the host sets it themselves */
            rsvpMode:'custom', rsvpBy:start, rsvpTouched:false,
            entryMode:'free', entryNote:'',
-           visibility:'friends',
            reminders:[1440], remN:2, remUnit:'Hours', notifyChanges:true,
            /* step 4 */
            invitees:[], extra:[], inviteMsg:'', msgTouched:false };
+  var ls = lastSettings(), k;
+  if(ls) for(k in ls) if(ls[k] != null && d.hasOwnProperty(k))
+    d[k] = Array.isArray(ls[k]) ? ls[k].slice() : ls[k];
+  return d;
 }
 function loadDraft(){
   if(EDIT) return EDIT.draft;        /* step 3 edits the event in place */
@@ -2828,17 +2932,21 @@ function renderCreate2(){
    the chevron folds the card away.
    ====================================================================== */
 
-var INV_OPTS = [
-  { k:'Invite Only', s:'Only people directly invited can RSVP.' },
-  { k:'Open Invite', s:'Anyone with the event link can request to join.' },
-  { k:'Public Link', s:'Anyone with the event link can RSVP without approval.' }
+/* ---- who can join: one ladder from wide open to host-approved ---- */
+var JOIN_OPTS = [
+  { k:'public',  ic:'globe',     t:'Public',                lab:'Public',
+    s:'Listed on Down2Chill — anyone can find it, join, and invite others.' },
+  { k:'open',    ic:'link',      t:'Anyone With the Link',  lab:'Anyone with the link',
+    s:'The link is the invitation — anyone who has it can join and invite others.' },
+  { k:'guests',  ic:'user-plus', t:'Guests Can Invite',     lab:'Guests can invite',
+    s:'Guests join by claiming an invited name and can invite more people. Someone not on the list can ask you to join.' },
+  { k:'private', ic:'lock',      t:'Private',               lab:'Private',
+    s:'Only names you approve get in — guests’ invites and join requests come to you first.' }
 ];
-var VIS_OPTS = [
-  { k:'invited', ic:'lock',      t:'Invited Guests Only', s:'Only invited guests can view the event.',            lab:'Invited only' },
-  { k:'friends', ic:'users',     t:'Friends Only',        s:'Your Down2Chill friends can discover the event.',    lab:'Friends Only' },
-  { k:'fog',     ic:'user-plus', t:'Friends of Guests',   s:'Invited guests may share the event with their friends.', lab:'Friends of guests' },
-  { k:'public',  ic:'globe',     t:'Public',              s:'Anyone with the event link can view the event.',     lab:'Public' }
-];
+function joinOpt(k){
+  for(var i = 0; i < JOIN_OPTS.length; i++) if(JOIN_OPTS[i].k === k) return JOIN_OPTS[i];
+  return JOIN_OPTS[1];
+}
 var RSVP_OPTS = [
   { k:'none',   t:'No Deadline' }, { k:'week', t:'1 Week Before' },
   { k:'3days',  t:'3 Days Before' }, { k:'1day', t:'1 Day Before' },
@@ -2848,7 +2956,7 @@ var UNIT_MIN = { Minutes:1, Hours:60, Days:1440, Weeks:10080 };
 var REM_PRESETS = [ ['10080','1 Week Before'], ['1440','1 Day Before'], ['60','1 Hour Before'] ];
 
 /* which cards are folded open \u2014 view state, not part of the draft */
-var SEC_OPEN = { cap:1, inv:1, plus:1, rsvp:1, entry:1, vis:1, rem:1 };
+var SEC_OPEN = { cap:1, join:1, plus:1, rsvp:1, entry:1, rem:1 };
 
 /* ---------- derived labels: one value, two presentations ---------- */
 function capLabel(d){ return d.capMode === 'unlimited' ? 'Unlimited' : d.capacity + ' guests'; }
@@ -2868,10 +2976,6 @@ function entryLabel(d){
   return d.entryMode === 'free' ? 'Free'
        : d.entryMode === 'door' ? 'Pay at event'
        : (d.entryNote.trim() || 'Custom');
-}
-function visOpt(d){
-  for(var i = 0; i < VIS_OPTS.length; i++) if(VIS_OPTS[i].k === d.visibility) return VIS_OPTS[i];
-  return VIS_OPTS[1];
 }
 function remLabel(m){
   m = +m;
@@ -2941,11 +3045,15 @@ function cardCapacity(d){
         '<p class="onote">Suggested range: 2\u2013500 guests.</p>'
       : ''));
 }
-function cardInvite(d){
-  return secCard('inv','mail','Invitations', d.invite,
-    '<div class="opts" role="radiogroup" aria-label="Invitations">' +
-      INV_OPTS.map(function(o){ return optRow('invite', o.k, d.invite === o.k, o.k, o.s); }).join('') +
-    '</div>');
+function cardJoin(d){
+  return secCard('join','mail','Who Can Join', joinOpt(d.join).lab,
+    '<div class="opts" role="radiogroup" aria-label="Who Can Join">' +
+      JOIN_OPTS.map(function(o){
+        return optRow('join', o.k, d.join === o.k, o.t, o.s, o.ic);
+      }).join('') +
+    '</div>' +
+    '<p class="onote">Whoever joins, you stay in charge — you can remove any guest, ' +
+      'and requests wait for your approval.</p>');
 }
 function cardPlus(d){
   return secCard('plus','user-plus','Plus Ones', plusLabel(d),
@@ -2983,16 +3091,6 @@ function cardEntry(d){
         'aria-label="Entry cost information" placeholder="$10 at the door" value="' + h(d.entryNote) + '">' +
         '<span class="count" id="c-entrycount">' + d.entryNote.length + ' / 80</span></div>'
       : ''));
-}
-function cardVisibility(d){
-  return secCard('vis','lock','Event Visibility', visOpt(d).lab,
-    '<div class="opts" role="radiogroup" aria-label="Event Visibility">' +
-      VIS_OPTS.map(function(o){
-        return optRow('visibility', o.k, d.visibility === o.k, o.t, o.s, o.ic);
-      }).join('') +
-    '</div>' +
-    '<p class="onote">Visibility controls who can view the event.</p>' +
-    '<p class="onote">Invitation settings control who can RSVP.</p>');
 }
 function cardReminders(d){
   var custom = hasCustomRem(d), none = !d.reminders.length;
@@ -3041,7 +3139,7 @@ function step3Body(){
   return '<section class="full"><h2 class="fld">Guest Settings</h2>' +
       '<p class="fsub">Set the details and preferences for your event.</p></section>' +
     '<div class="s3cards">' +
-      cardCapacity(d) + cardInvite(d) + cardPlus(d) + cardRsvp(d) + cardEntry(d) + cardVisibility(d) +
+      cardJoin(d) + cardCapacity(d) + cardPlus(d) + cardRsvp(d) + cardEntry(d) +
     '</div>' +
     '<section class="full"><h2 class="fld">Reminders</h2>' +
       '<p class="fsub">Keep your guests in the loop.</p></section>' +
@@ -3076,7 +3174,8 @@ function step2Settings(d){
   return '<div class="scard" id="p2-set">' +
       p2Row('cap','users','Maximum Guests', capLabel(d),
         withCurrent(['Unlimited','10 guests','20 guests','30 guests','50 guests','100 guests'], capLabel(d))) +
-      p2Row('invite','mail','Invitations', d.invite, INV_OPTS.map(function(o){ return o.k; })) +
+      p2Row('join','mail','Who Can Join', joinOpt(d.join).lab,
+        JOIN_OPTS.map(function(o){ return o.lab; })) +
       p2Row('plus','user-plus','Plus Ones', plusLabel(d),
         withCurrent(['Not allowed','Allowed','+2 each','+3 each'], plusLabel(d))) +
       '<div class="srow"><span class="sic">' + ico('cal-p') + '</span><b>RSVP Deadline</b>' +
@@ -3086,8 +3185,6 @@ function step2Settings(d){
       '</div>' +
       p2Row('entry','dollar','Entry Cost', entryLabel(d),
         withCurrent(['Free','Pay at event'], entryLabel(d))) +
-      p2Row('vis','lock','Event Visibility', visOpt(d).lab,
-        VIS_OPTS.map(function(o){ return o.lab; })) +
     '</div>';
 }
 function step2Reminders(d){
@@ -3101,8 +3198,8 @@ function applyP2(key, v){
   if(key === 'cap'){
     if(v === 'Unlimited') d.capMode = 'unlimited';
     else { d.capMode = 'custom'; d.capacity = parseInt(v, 10) || d.capacity; }
-  } else if(key === 'invite'){
-    d.invite = v;
+  } else if(key === 'join'){
+    JOIN_OPTS.forEach(function(o){ if(o.lab === v) d.join = o.k; });
   } else if(key === 'plus'){
     if(v === 'Not allowed') d.plusMode = 'none';
     else if(v === 'Allowed') d.plusMode = 'one';
@@ -3110,8 +3207,6 @@ function applyP2(key, v){
   } else if(key === 'entry'){
     if(v === 'Free') d.entryMode = 'free';
     else if(v === 'Pay at event') d.entryMode = 'door';
-  } else if(key === 'vis'){
-    VIS_OPTS.forEach(function(o){ if(o.lab === v) d.visibility = o.k; });
   } else if(key === 'rem'){
     if(v === 'None') d.reminders = [];
     else if(v === '1 week before') d.reminders = [10080];
@@ -3549,8 +3644,7 @@ function eventToDraft(ev){
   d.vibes = (ev.vibes && ev.vibes.length) ? ev.vibes.slice() : [];
   d.capMode  = ev.capacityMode || (/unlimited|no limit/i.test(ev.capacity || '') ? 'unlimited' : 'custom');
   d.capacity = ev.capacityMax || numOf(ev.capacity, 30);
-  d.invite   = ev.inviteType && /^(Invite Only|Open Invite|Public Link)$/.test(ev.inviteType)
-             ? ev.inviteType : 'Invite Only';
+  d.join     = joinMode(ev);
   d.plusMode = ev.plusOnesMode || (/not allowed/i.test(ev.plusOnes || '') ? 'none' : 'one');
   d.plusN    = ev.plusOnesMax > 1 ? ev.plusOnesMax : 2;
   d.rsvpMode = ev.rsvpMode || (ev.rsvpBy ? 'custom' : 'none');
@@ -3558,7 +3652,6 @@ function eventToDraft(ev){
   d.rsvpTouched = true;
   d.entryMode = ev.entryMode || (/^free$/i.test(ev.entry || '') ? 'free' : 'custom');
   d.entryNote = ev.entryNote || (d.entryMode === 'custom' ? (ev.entry || '') : '');
-  d.visibility = ev.visibilityMode || 'friends';
   d.reminders = (ev.reminders || []).slice();
   d.notifyChanges = ev.notifyChanges !== false;
   return d;
@@ -3607,10 +3700,15 @@ function settingsPatch(d){
     capacity: capLabel(d), capacityMode: d.capMode,
     capacityMax: d.capMode === 'unlimited' ? 0 : d.capacity,
     entry: entryLabel(d), entryMode: d.entryMode, entryNote: d.entryNote.trim(),
-    inviteType: d.invite,
+    /* one ladder — the legacy pair is derived so older readers stay coherent */
+    join: d.join,
+    inviteType: d.join === 'open' ? 'Open Invite'
+              : d.join === 'public' ? 'Public Link' : 'Invite Only',
     plusOnes: plusLabel(d), plusOnesMode: d.plusMode, plusOnesMax: plusMax(d),
     rsvpBy: rsvpDate(d), rsvpMode: d.rsvpMode,
-    visibility: visOpt(d).lab, visibilityMode: d.visibility,
+    visibility: joinOpt(d.join).lab,
+    visibilityMode: d.join === 'public' ? 'public'
+                  : d.join === 'private' ? 'invited' : 'fog',
     reminders: remSorted(d), reminderLabel: remSummary(d), notifyChanges: !!d.notifyChanges
   };
 }
@@ -3790,7 +3888,7 @@ function createLocalEvent(d){
              invitedLabel: 'Just now', isHost: false, isYou: false, status: 'pending' };
   });
   ev.maybes = []; ev.cants = [];
-  ev.photos = [];
+  ev.photos = []; ev.requests = [];
   ev.activity = [{ personName: me.name, personAvatarUrl: me.av, icon: 'check',
                    isCheck: true, text: 'created this event', whenLabel: '',
                    at: new Date().toISOString(), quote: false }];
@@ -3842,24 +3940,33 @@ function inviteePool(ev){
 }
 function claimList(ev){ return inviteePool(ev).slice(0, 12); }
 
-/* ---- invite-type & visibility gates ----
-   amInvited: I already responded, or I claimed a spot here, or the host
-   picked one of my uids, or my name is on the curated list. canJoin gates
-   participating (RSVP, chat, photos, inviting) on Invite Only events;
-   canView gates the whole page when visibility is Invited Guests Only.
-   Friends / Friends-of-guests are discovery settings, not link gates. */
-function isInviteOnly(ev){ return /^invite only$/i.test(ev.inviteType || ''); }
-function amInvited(ev){
+/* ---- the join gates ----
+   amJoined: I already answered, I claimed a curated spot here, the host
+   picked one of my uids, my own uid-keyed guest row exists (an approved
+   join request), or my profile name is on the curated list. canJoin gates
+   participating (RSVP, chat, photos, inviting): open/public rungs admit
+   anyone with the link; guests/private rungs need a claimed spot. */
+function amJoined(ev){
   var m = loadMe();
   if(myRsvp(ev.id)) return true;
   if(m.claims[ev.id] || (ev.slug && m.claims[ev.slug])) return true;
   var uids = myUids();
   if((ev.invitedUids || []).some(function(u){ return u && uids.indexOf(u) > -1; })) return true;
+  if([].concat(ev.guests || [], ev.maybes || [], ev.cants || [], ev.waiting || [])
+      .some(function(g){ return g.uid && uids.indexOf(g.uid) > -1; })) return true;
   var nm = (m.name || '').toLowerCase();
   return !!nm && inviteePool(ev).some(function(g){ return (g.name || '').toLowerCase() === nm; });
 }
-function canJoin(ev){ return ev.role === 'hosting' || !isInviteOnly(ev) || amInvited(ev); }
-function canView(ev){ return ev.role === 'hosting' || ev.visibilityMode !== 'invited' || amInvited(ev); }
+/* my own not-yet-approved join request, if any */
+function myJoinRequest(ev){
+  var uids = myUids();
+  return (ev.requests || []).filter(function(r){
+    return r.reqType === 'join' && r.uid && uids.indexOf(r.uid) > -1; })[0] || null;
+}
+function canJoin(ev){
+  var jm = joinMode(ev);
+  return ev.role === 'hosting' || jm === 'open' || jm === 'public' || amJoined(ev);
+}
 /* names already claimed by some OTHER visitor \u2014 from streamed guest rows
    (live) and from every registry profile's claims map (local) */
 function takenNames(ev){
@@ -3878,7 +3985,9 @@ function takenNames(ev){
   return out;
 }
 function claimCard(ev){
-  var taken = takenNames(ev), lock = isInviteOnly(ev);
+  var taken = takenNames(ev),
+      /* on the gated rungs an unlisted name becomes a join request */
+      needOk = joinMode(ev) === 'guests' || joinMode(ev) === 'private';
   /* a claimed name simply is not on the menu any more */
   var rows = claimList(ev).filter(function(g){ return !taken[g.name.toLowerCase()]; })
     .map(function(g){
@@ -3893,41 +4002,31 @@ function claimCard(ev){
     '<h3 id="modal-h">Who are you?</h3>' +
     (ev.inviteMessage ? '<p>\u201C' + h(ev.inviteMessage) + '\u201D</p>' : '') +
     (rows
-      ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name' +
-        (lock ? '' : ', or type it below') + '.</p>' +
-        '<div class="claim-list">' + rows + '</div>' +
-        (lock ? '' : '<div class="claim-or"><span>or</span></div>')
-      : '<p>' + (lock
-          ? 'This event is invite only \u2014 ask ' + h(fname(ev.hostName)) + ' for an invitation.'
-          : 'Type your name so ' + h(fname(ev.hostName)) + ' knows who\u2019s coming.') + '</p>') +
-    /* invite only means the curated list IS the menu \u2014 no typing your way in */
-    (lock
-      ? (rows ? '<p class="onote center">Don\u2019t see your name? Ask ' +
-                h(fname(ev.hostName)) + ' for an invitation.</p>' : '')
-      : '<div class="addbox">' +
-        '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
-        '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
-      '</div>') +
+      ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name, or type it below.</p>' +
+        '<div class="claim-list">' + rows + '</div><div class="claim-or"><span>or</span></div>'
+      : '<p>Type your name so ' + h(fname(ev.hostName)) + ' knows who\u2019s coming.</p>') +
+    '<div class="addbox">' +
+      '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name" value="' +
+        h(loadMe().name || '') + '">' +
+      '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
+    '</div>' +
+    (needOk ? '<p class="onote center">Names not on the list are sent to ' +
+      h(fname(ev.hostName)) + ' for approval.</p>' : '') +
   '</div>';
 }
-/* ---- private event: the gate a non-invited visitor sees ----
-   Names are validated against inviteePool without ever listing it, so a
-   stranger with the link learns nothing about who is invited. */
-function renderLocked(ev){
+/* ---- an event that no longer exists for this viewer (deleted, or the
+   host removed them) — indistinguishable on purpose */
+function renderGone(){
   return '<div class="wrap narrow">' +
     '<header class="top">' +
       '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">' + ico('back') + '</a>' +
       brandMark() + '<div class="sp"></div>' + profBtn() +
     '</header>' +
     '<div class="modal-card claim" style="margin:44px auto 0">' +
-      '<div class="modal-ic">' + ico('lock') + '</div>' +
-      '<h3>Private event</h3>' +
-      '<p>Only invited guests can view this event. If you were invited, enter the name your invitation was sent to.</p>' +
-      '<div class="addbox">' +
-        '<input class="inp" id="lock-name" type="text" maxlength="40" placeholder="Your name">' +
-        '<button class="addbtn" type="button" data-unlock>' + ico('arr') + 'Unlock</button>' +
-      '</div>' +
-      '<p class="onote center">Not on the list? Ask ' + h(fname(ev.hostName)) + ' for an invitation.</p>' +
+      '<div class="modal-ic">' + ico('cal-p') + '</div>' +
+      '<h3>Nothing here</h3>' +
+      '<p>This event is no longer available.</p>' +
+      '<a class="modal-cta" href="#home" data-nav>Back to Events</a>' +
     '</div>' +
   '</div>';
 }
@@ -4149,10 +4248,11 @@ function eventDock(id){
 
     closeLb();
     if(curKeyChanged || !modal.querySelector('.claim')) closeModal();
-    /* a private event shows its gate instead of any detail view */
-    var dEv=(r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat') ? findEvent(r.id) : null,
-        locked=!!(dEv && !canView(dEv));
-    if(locked){           app.innerHTML=renderLocked(dEv); chrome.innerHTML=''; }
+    /* an event a banned viewer opens (or one that was deleted) is simply gone */
+    var isDetail=(r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat'),
+        dEv=isDetail ? findEvent(r.id) : null,
+        gone=isDetail && !dEv;
+    if(gone){             app.innerHTML=renderGone(); chrome.innerHTML=''; }
     else if(r.v==='home'){ app.innerHTML=renderHome(homeTab,homeQ,homeSearch); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
     else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(r.id); }
@@ -4169,7 +4269,7 @@ function eventDock(id){
                                chrome.innerHTML=createFoot(r.step); }
     else {                     app.innerHTML=renderGuests(r.id);chrome.innerHTML=''; }
 
-    document.body.className = locked ? ''
+    document.body.className = gone ? ''
                             : (r.v==='event') ? 'has-dock'
                             : (r.v==='create'||r.v==='edit') ? 'has-cbar'
                             : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
@@ -4186,7 +4286,7 @@ function eventDock(id){
           if(cFoc){ cInp2.focus(); try{ cInp2.setSelectionRange(cAt,cAt); }catch(e){} } }
       }
     }
-    if(r.v==='event' && !locked) maybeClaim(r.id);
+    if(r.v==='event' && dEv) maybeClaim(r.id);
 
     curKey=key;
     var restore = curKeyChanged ? (scrolls[key]!=null ? scrolls[key] : 0) : app.scrollTop;
@@ -4425,17 +4525,6 @@ function eventDock(id){
     }
     var clm=t.closest('[data-claim]');
     if(clm){ doClaim(clm.dataset.claim, false); return; }
-    if(t.closest('[data-unlock]')){
-      var li=document.getElementById('lock-name'), lv=li&&li.value.trim();
-      if(!lv){ toast('Type your name first','err'); return; }
-      var lev=findEvent(route().id); if(!lev) return;
-      var hit=inviteePool(lev).filter(function(g){
-        return (g.name||'').toLowerCase()===lv.toLowerCase(); })[0];
-      if(!hit){ toast('That name isn’t on the guest list.','err',4000); return; }
-      doClaim(hit.name, false);        /* taken-name check happens inside */
-      render();
-      return;
-    }
     if(t.closest('[data-claim-go]')){
       var cin=document.getElementById('claim-name'), cv=cin&&cin.value.trim();
       if(!cv){ toast('Type your name first','err'); return; }
@@ -4475,6 +4564,10 @@ function eventDock(id){
       toast('Accounts linked as '+fname(loadMe().name||'you'));
       repaintProfile(); return;
     }
+    var rok=t.closest('[data-rok]');
+    if(rok){ actRequest(rok.dataset.rok, true); return; }
+    var rno=t.closest('[data-rno]');
+    if(rno){ actRequest(rno.dataset.rno, false); return; }
     var gsec=t.closest('[data-gsec]');
     if(gsec){
       guestsOpen[gsec.dataset.gsec]=!guestsOpen[gsec.dataset.gsec];
@@ -4622,15 +4715,18 @@ function eventDock(id){
       e.stopPropagation();
       if(anchor===dots){ closeMenu(); return; }
       closeMenu();
+      var isPerson=!!dots.dataset.gduid;
       menu.innerHTML='<button type="button" role="menuitem" class="danger" data-gremove>'+
-        ico('trash')+'Remove Invitation</button>';
-      menuEvent=null; menuGuest={ id:route().id, name:dots.dataset.gdots };
+        ico('trash')+(isPerson?'Remove Guest':'Remove Invitation')+'</button>';
+      menuEvent=null;
+      menuGuest={ id:route().id, name:dots.dataset.gdots,
+                  uid:dots.dataset.gduid||'', status:dots.dataset.gstat||'' };
       anchor=dots; dots.setAttribute('aria-expanded','true');
       placeMenu(dots); return;
     }
     if(t.closest('[data-gremove]')){
       var mg=menuGuest; closeMenu();
-      if(mg) askRemoveInvite(mg.id, mg.name);
+      if(mg) askRemoveGuest(mg);
       return;
     }
     if(!t.closest('#row-menu')) closeMenu();
@@ -4664,10 +4760,6 @@ function eventDock(id){
     if(e.key==='Enter' && e.target.id==='msg-in'){ e.preventDefault(); sendMsg(e.target.dataset.event); }
     if(e.key==='Enter' && e.target.id==='c-add'){ e.preventDefault(); commitAdd(true); }
     if(e.key==='Enter' && e.target.id==='inv-add'){ e.preventDefault(); commitInvite(true); }
-    if(e.key==='Enter' && e.target.id==='lock-name'){
-      e.preventDefault();
-      var ub=document.querySelector('[data-unlock]'); if(ub) ub.click();
-    }
     /* spans/divs with role="button" don't click from the keyboard on their own */
     if((e.key==='Enter'||e.key===' ') && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){
       var rb=e.target.closest && e.target.closest('[role="button"]');
@@ -4938,7 +5030,8 @@ function eventDock(id){
     var sheet=modal.querySelector('[data-invitefor]'),
         ev=sheet?findEvent(sheet.dataset.invitefor):null,
         have={};
-    if(ev) [].concat(ev.guests||[],ev.maybes||[],ev.cants||[],ev.waiting||[],ev.guestPreview||[])
+    if(ev) [].concat(ev.guests||[],ev.maybes||[],ev.cants||[],ev.waiting||[],
+                     ev.requests||[],ev.guestPreview||[])
       .forEach(function(g){ if(g.name) have[g.name.toLowerCase()]=1; });
     INVQ.forEach(function(p){ have[p.name.toLowerCase()]=1; });
     var added=0, dup=0;
@@ -4960,6 +5053,24 @@ function eventDock(id){
     var id=sheet.dataset.invitefor, ev=findEvent(id), list=INVQ.slice();
     INVQ=[];
     closeModal();
+    /* on a private event a guest's additions are suggestions for the host */
+    if(ev && joinMode(ev)==='private' && ev.role!=='hosting'){
+      var by=fname(loadMe().name||'A guest');
+      if(STORE.mode==='live' && window.D2C && D2C.suggestInvites){
+        toast('Sending…','wait',0);
+        D2C.suggestInvites(id, list, by)
+          .then(function(){ toast('Sent to '+fname(ev.hostName)+' for approval'); })
+          .catch(function(e){ toast((e&&e.message)||'Could not send','err',4500); });
+      } else {
+        ev.requests=(ev.requests||[]).concat(list.map(function(p){
+          return { reqType:'invite', uid:'', name:p.name, avatarUrl:GAV,
+                   phone:p.phone||'', byName:by, docId:'' };
+        }));
+        STORE.notify();
+        toast('Sent to '+fname(ev.hostName)+' for approval');
+      }
+      return;
+    }
     if(STORE.mode==='live' && window.D2C && D2C.inviteGuests){
       toast('Sending invites…','wait',0);
       D2C.inviteGuests(id, list)
@@ -4984,6 +5095,14 @@ function eventDock(id){
     if(ev && takenNames(ev)[name.toLowerCase()]){
       toast('Sorry \u2014 '+fname(name)+' is already taken here. Pick another name.','err',4500);
       return;
+    }
+    /* a typed name that matches the list IS a claim; an unlisted one on the
+       gated rungs becomes a join request for the host to approve */
+    if(custom && ev){
+      var listed=inviteePool(ev).filter(function(g){
+        return (g.name||'').toLowerCase()===name.toLowerCase(); })[0];
+      if(listed) name=listed.name;
+      else if(joinMode(ev)==='guests'||joinMode(ev)==='private'){ requestJoin(ev, name); return; }
     }
     m.claims[id]=name;
     if(custom || !m.name) m.name=name;
@@ -5015,6 +5134,56 @@ function eventDock(id){
       modal.innerHTML=finishCard(); modal.hidden=false;
       document.body.classList.add('modal-open');
     }
+  }
+  /* ---------- asking to join a gated event ----------
+     The request is a guests doc with status "request": invisible to every
+     guest list until the host approves it into a real pending row. */
+  function requestJoin(ev, name){
+    var m=loadMe();
+    if(myJoinRequest(ev)){
+      closeModal();
+      toast('Request already sent — waiting for '+fname(ev.hostName)+'.','',4500);
+      return;
+    }
+    if(!m.name) m.name=name;             /* the typed name is their identity */
+    if(m.events.indexOf(ev.id)<0) m.events.push(ev.id);
+    pendingRsvp=null;
+    saveMe(); closeModal();
+    if(STORE.mode==='live' && window.D2C && D2C.requestJoin){
+      D2C.requestJoin(ev.id, name).catch(function(e){
+        toast((e&&e.message)||'Could not send the request','err',4500); });
+    } else {
+      ev.requests=(ev.requests||[]).concat([{ reqType:'join', uid:m.uid, name:name,
+        avatarUrl:meAvatar(), phone:normPhone(m.phone)||'', byName:'', docId:'' }]);
+      STORE.notify();
+    }
+    toast('Request sent — '+fname(ev.hostName)+' approves new names.','',5000);
+  }
+  /* ---------- the host answers a request ---------- */
+  function actRequest(ref, ok){
+    var id=route().id, ev=findEvent(id);
+    if(!ev || !ev.requests) return;
+    var i, r=null;
+    for(i=0;i<ev.requests.length;i++)
+      if(String(ev.requests[i].docId||i)===String(ref)){ r=ev.requests[i]; break; }
+    if(!r) return;
+    if(STORE.mode==='live' && window.D2C && r.docId){
+      (ok ? D2C.approveRequest(ev.id, r.docId) : D2C.declineRequest(ev.id, r.docId))
+        .then(function(){ toast(ok ? r.name+' approved' : 'Request declined'); })
+        .catch(function(e){ toast((e&&e.message)||'Could not update the request','err',4500); });
+      return;                            /* the guests stream repaints */
+    }
+    ev.requests.splice(i,1);
+    if(ok){
+      ev.waiting=(ev.waiting||[]).concat([{ name:r.name, avatarUrl:r.avatarUrl||GAV,
+        phone:r.phone||'', message:'', invitedLabel:'Request approved',
+        isHost:false, isYou:false, status:'pending', uid:r.uid||'', plus:0,
+        source:'request' }]);
+      ev.counts.pending=(ev.counts.pending||0)+1;
+      appendLocalActivity(id, 'user-plus', 'approved '+r.name);
+    }
+    STORE.notify();
+    toast(ok ? r.name+' approved' : 'Request declined');
   }
   function repaintStep4(){
     var box=document.getElementById('c4');
@@ -5094,6 +5263,7 @@ function eventDock(id){
     btn.innerHTML='<span class="spin"></span>Creating\u2026';
     function done(id){
       if(d.draftId) deleteEventDraft(d.draftId);
+      rememberSettings(d);          /* the next draft starts from these */
       clearDraft(); toast('Event created');
       /* depth 0 so the event page's Back behaves like any other event's: home */
       history.replaceState({d:0},'','#event/'+id);
@@ -5264,7 +5434,14 @@ function eventDock(id){
       return;
     }
     if(ev && !canJoin(ev)){
-      toast('This event is invite only — ask '+fname(ev.hostName)+' for an invitation.','err',4500);
+      if(myJoinRequest(ev)){
+        toast('Request sent — waiting for '+fname(ev.hostName)+' to approve.','',4500);
+        return;
+      }
+      /* the way in is claiming a spot — reopen the sheet with the answer parked */
+      pendingRsvp={ id:id, k:k };
+      modal.innerHTML=claimCard(ev); modal.hidden=false;
+      document.body.classList.add('modal-open');
       return;
     }
     var prev=myRsvp(id)||'';
@@ -5284,21 +5461,29 @@ function eventDock(id){
     saveMe();
     if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant,
                       pending:(ev.counts&&ev.counts.pending)||0};
-    /* first answer: my curated invite row is absorbed by my response (live
-       mode also deletes the pending doc — see absorbPending in the module) */
+    /* first answer: my waiting presence is absorbed by my response — the
+       curated uid-less row under my name, and my own approved-request row.
+       Only rows that were counted move the pending counter (an approved
+       request was; an announce-visit row never was). Live mode mirrors this
+       via absorbPending + the wasReq flag on setRsvp. */
+    var wasReq=false;
     if(!prev && ev && ev.waiting){
-      var an=(m.claims[id]||m.name||'').toLowerCase(), aw=ev.waiting.length;
-      if(an){
-        ev.waiting=ev.waiting.filter(function(g){
-          return g.uid || (g.name||'').toLowerCase()!==an; });
-        var cut=aw-ev.waiting.length;
-        if(cut) ev.counts.pending=Math.max(0,(ev.counts.pending||0)-cut);
-      }
+      var an=(m.claims[id]||m.name||'').toLowerCase(), uids0=myUids(), cut=0;
+      ev.waiting=ev.waiting.filter(function(g){
+        if(g.uid){
+          if(uids0.indexOf(g.uid)<0) return true;
+          if(g.source==='request'){ wasReq=true; cut++; }
+          return false;
+        }
+        if(an && (g.name||'').toLowerCase()===an){ cut++; return false; }
+        return true;
+      });
+      if(cut) ev.counts.pending=Math.max(0,(ev.counts.pending||0)-cut);
     }
     var pslot=document.getElementById('plus-slot');
     if(pslot && ev) pslot.innerHTML=plusRowInner(ev);
     if(STORE.mode==='live' && window.D2C && D2C.setRsvp){
-      D2C.setRsvp(id, k, prev).catch(function(e){
+      D2C.setRsvp(id, k, prev, wasReq).catch(function(e){
         toast((e&&e.message)||'Could not save your RSVP','err',4500);
       });
     } else {
@@ -5419,31 +5604,49 @@ function eventDock(id){
     after();
   }
 
-  /* ---------- withdrawing an invitation (host only) ---------- */
-  function askRemoveInvite(id, name){
-    var ev=findEvent(id); if(!ev || !name) return;
-    confirmFn=function(){ doRemoveInvite(id, name); };
-    modal.innerHTML=confirmCard('Remove “'+name+'”?',
-      'Their invitation is withdrawn and they leave the waiting list. You can invite them again anytime.',
-      'Remove invitation');
+  /* ---------- removing someone (host only) ----------
+     A pending uid-less row is just an invitation — withdrawing it frees the
+     name. A person (any row with a visitor uid) is removed AND banned: the
+     event disappears for them and their link stops working. */
+  function askRemoveGuest(mg){
+    var ev=findEvent(mg.id); if(!ev || !mg.name) return;
+    confirmFn=function(){ doRemoveGuest(mg); };
+    modal.innerHTML=confirmCard('Remove “'+mg.name+'”?',
+      mg.uid
+        ? 'They come off the guest list and the event disappears for them — their link stops working. You can invite them again later.'
+        : 'Their invitation is withdrawn and they leave the waiting list. You can invite them again anytime.',
+      mg.uid ? 'Remove guest' : 'Remove invitation');
     modal.hidden=false;
     document.body.classList.add('modal-open');
     var c=modal.querySelector('[data-confirm-yes]'); if(c) c.focus();
   }
-  function doRemoveInvite(id, name){
-    var ev=findEvent(id); if(!ev) return;
-    if(STORE.mode==='live' && window.D2C && D2C.removeGuest){
+  function doRemoveGuest(mg){
+    var ev=findEvent(mg.id); if(!ev) return;
+    if(STORE.mode==='live' && window.D2C){
       toast('Removing…','wait',0);
-      D2C.removeGuest(ev.id, name)
-        .then(function(){ toast('Invitation removed'); })
-        .catch(function(e){ toast((e&&e.message)||'Could not remove the invitation','err',4500); });
+      (mg.uid ? D2C.banGuest(ev.id, mg.uid, mg.name) : D2C.removeGuest(ev.id, mg.name))
+        .then(function(){ toast(mg.uid?'Guest removed':'Invitation removed'); })
+        .catch(function(e){ toast((e&&e.message)||'Could not remove','err',4500); });
       return;
     }
-    var low=name.toLowerCase();
-    ev.waiting=(ev.waiting||[]).filter(function(g){ return (g.name||'').toLowerCase()!==low; });
-    if(ev.counts && ev.counts.pending>0) ev.counts.pending--;
+    var low=(mg.name||'').toLowerCase(), cuts={going:0,maybe:0,cant:0,pending:0};
+    var hit=function(g){
+      return (mg.uid && g.uid===mg.uid) || (!g.uid && (g.name||'').toLowerCase()===low);
+    };
+    [['guests','going'],['maybes','maybe'],['cants','cant'],['waiting','pending']]
+      .forEach(function(p){
+        var arr=ev[p[0]]||[], keep=arr.filter(function(g){ return !hit(g); });
+        cuts[p[1]]=arr.length-keep.length;
+        ev[p[0]]=keep;
+      });
+    ['going','maybe','cant','pending'].forEach(function(k){
+      if(cuts[k] && ev.counts) ev.counts[k]=Math.max(0,(ev.counts[k]||0)-cuts[k]);
+    });
+    ev.requests=(ev.requests||[]).filter(function(r){ return !hit(r); });
+    if(mg.uid && (ev.banned||[]).indexOf(mg.uid)<0)
+      ev.banned=(ev.banned||[]).concat([mg.uid]);
     STORE.notify();
-    toast('Invitation removed');
+    toast(mg.uid?'Guest removed':'Invitation removed');
   }
 
   function closeMenu(){
@@ -5652,6 +5855,9 @@ function eventDoc(ev, fsId, hostFsId){
     dateISO: ev.date, time: ev.time, timeSort: t24(ev.time),
     venue: ev.venue, address: ev.address, about: ev.about,
     vibe: ev.vibe, capacity: ev.capacity, entry: ev.entry, inviteType: ev.invite,
+    join: ev.vis === "public" ? "public"
+        : /^invite only$/i.test(ev.invite || "") ? "guests" : "open",
+    banned: [],
     dot: ev.dot, role: ev.role,
     coverPath: "", coverUrl: IMG(ev.img, 1000, 1250),
     thumbUrl: IMG(ev.img, 400, 440),
@@ -6131,6 +6337,75 @@ async function removeGuest(eventId, name){
   logActivity(eventId, "x", "removed an invitation");
 }
 
+/* ---------------- the approval pipeline ----------------
+   A request is a guests doc with status "request" — never counted, never
+   shown in the guest lists, only in the host's Requests card. Approving
+   turns it into a real pending row; declining deletes it. */
+async function requestJoin(eventId, name){
+  const { db, fs } = await initFirebase();
+  const me = meIdent();
+  await fs.setDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", me.fsId || "anon"), {
+    uid: me.fsId || "", name: name, avatarUrl: me.av,
+    phone: (window.loadMe ? normPhone(loadMe().phone) : "") || "",
+    message: "", invitedLabel: "Asked to join", isHost: false, isYou: false,
+    status: "request", reqType: "join", order: Date.now(), source: "request"
+  }, { merge: true });
+}
+async function suggestInvites(eventId, list, byName){
+  const { db, fs } = await initFirebase();
+  const me = meIdent();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  await Promise.all(list.map((g, i) =>
+    fs.setDoc(fs.doc(fs.collection(evRef, "guests")), {
+      uid: "", name: g.name, avatarUrl: GAV, phone: g.phone || "", message: "",
+      invitedLabel: "Suggested by " + byName, isHost: false, isYou: false,
+      status: "request", reqType: "invite", byName: byName, byUid: me.fsId || "",
+      order: Date.now() + i, source: "request"
+    })));
+}
+async function approveRequest(eventId, docId){
+  const { db, fs } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  await fs.updateDoc(fs.doc(evRef, "guests", docId), {
+    status: "pending", invitedLabel: "Request approved", order: Date.now()
+  });
+  await fs.updateDoc(evRef, { "counts.pending": fs.increment(1) });
+}
+async function declineRequest(eventId, docId){
+  const { db, fs } = await initFirebase();
+  await fs.deleteDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", docId));
+}
+
+/* ---------------- the host removes a person ----------------
+   Every row of theirs goes (uid-keyed docs plus uid-less rows under the same
+   name), the counters follow, and the uid lands on the event's ban list so
+   the link stops working for them. */
+async function banGuest(eventId, uid, name){
+  const { db, fs } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  const gcol  = fs.collection(evRef, "guests");
+  const [byUid, byName] = await Promise.all([
+    fs.getDocs(fs.query(gcol, fs.where("uid", "==", uid))),
+    name ? fs.getDocs(fs.query(gcol, fs.where("name", "==", name)))
+         : Promise.resolve({ docs: [] })
+  ]);
+  const seen = {}, dead = [];
+  byUid.docs.concat(byName.docs).forEach(d => {
+    if(seen[d.id]) return;
+    const v = d.data();
+    if(v.uid === uid || !v.uid){ seen[d.id] = 1; dead.push(d); }  // never someone else's row
+  });
+  const cut = {};
+  dead.forEach(d => {
+    const s = d.data().status;
+    if(/^(going|maybe|cant|pending)$/.test(s)) cut[s] = (cut[s] || 0) + 1;
+  });
+  await Promise.all(dead.map(d => fs.deleteDoc(d.ref)));
+  const patch = { banned: fs.arrayUnion(uid) };
+  Object.keys(cut).forEach(s => { patch["counts." + s] = fs.increment(-cut[s]); });
+  await fs.updateDoc(evRef, patch);
+}
+
 /* ---------------- a named viewer joins the waiting list ---------------- */
 async function announceGuest(eventId){
   const { db, fs } = await initFirebase();
@@ -6160,7 +6435,7 @@ async function propagateProfile(p){
 /* ---------------- RSVP ----------------
    One guests doc per visitor uid, so re-answering overwrites instead of
    piling up rows, and the counts move by increments on the event doc.   */
-async function setRsvp(eventId, status, prev){
+async function setRsvp(eventId, status, prev, wasReq){
   const { db, fs } = await initFirebase();
   const me = meIdent();
   const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
@@ -6173,6 +6448,8 @@ async function setRsvp(eventId, status, prev){
   const inc = {};
   inc["counts." + status] = fs.increment(1);
   if(prev && prev !== status) inc["counts." + prev] = fs.increment(-1);
+  /* an approved join request was counted as pending until this answer */
+  if(!prev && wasReq) inc["counts.pending"] = fs.increment(-1);
   await fs.updateDoc(evRef, inc);
   /* a first answer absorbs the curated invite row that carried this name */
   if(!prev){
@@ -6249,12 +6526,13 @@ async function watchDetail(id){
   const base = [db, ...FS_ROOT, "events", ev.id];
 
   unsubDetail.push(fs.onSnapshot(fs.collection(...base, "guests"), snap => {
-    const all = snap.docs.map(d => d.data());
+    const all = snap.docs.map(d => mapGuest(d.data(), d.id));
     STORE.setDetail(id, {
-      guests:  all.filter(g => g.status === "going").map(mapGuest),
-      maybes:  all.filter(g => g.status === "maybe").map(mapGuest),
-      cants:   all.filter(g => g.status === "cant").map(mapGuest),
-      waiting: all.filter(g => g.status === "pending").map(mapGuest)
+      guests:  all.filter(g => g.status === "going"),
+      maybes:  all.filter(g => g.status === "maybe"),
+      cants:   all.filter(g => g.status === "cant"),
+      waiting: all.filter(g => g.status === "pending"),
+      requests: all.filter(g => g.status === "request")
     });
   }, e => err("guests: " + e.code)));
 
@@ -6280,11 +6558,12 @@ async function watchDetail(id){
     })}), e => err("activity: " + e.code)));
 }
 
-function mapGuest(g){
+function mapGuest(g, id){
   return { name: g.name || "Guest", avatarUrl: g.avatarUrl || "", message: g.message || "",
            invitedLabel: g.invitedLabel || "", isHost: !!g.isHost, isYou: !!g.isYou,
            status: g.status || "going", uid: g.uid || "", source: g.source || "",
-           phone: g.phone || "", plus: g.plus || 0 };
+           phone: g.phone || "", plus: g.plus || 0,
+           docId: id || "", reqType: g.reqType || "", byName: g.byName || "" };
 }
 
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
@@ -6331,8 +6610,9 @@ async function sendImage(eventId, file){
 }
 
 window.D2C = {
-  pickPhoto, sendMessage, sendImage, inviteGuests, removeGuest, uploadCover, deleteFile,
-  createEvent, updateEvent, deleteEvent,
+  pickPhoto, sendMessage, sendImage, inviteGuests, removeGuest, banGuest,
+  requestJoin, suggestInvites, approveRequest, declineRequest,
+  uploadCover, deleteFile, createEvent, updateEvent, deleteEvent,
   saveProfile, findByPhone, setRsvp, setPlus, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
