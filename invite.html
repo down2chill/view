@@ -42,7 +42,7 @@ button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
 a{color:inherit;text-decoration:none}
 svg.i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 :focus-visible{outline:2px solid var(--primary);outline-offset:3px;border-radius:6px}
-.wrap{max-width:720px;margin:0 auto;padding:0 max(var(--pad),env(safe-area-inset-left)) 0 max(var(--pad),env(safe-area-inset-right))}
+.wrap{max-width:720px;margin:0 auto;padding:0 max(var(--pad),env(safe-area-inset-right)) 0 max(var(--pad),env(safe-area-inset-left))}
 .sp{flex:1}
 .center{text-align:center}
 
@@ -531,7 +531,7 @@ body.lb-open #app{overflow:hidden}
 .toast{position:fixed;z-index:80;left:50%;bottom:calc(112px + env(safe-area-inset-bottom));
   transform:translateX(-50%);max-width:min(420px,calc(100vw - 32px));
   display:flex;align-items:center;gap:10px;padding:13px 18px;border-radius:999px;
-  background:#12143a;color:#fff;font-size:14.5px;font-weight:600;white-space:nowrap;
+  background:#12143a;color:#fff;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;
   box-shadow:0 14px 34px -10px rgba(10,10,50,.55);animation:trise .2s ease-out}
 .toast[hidden]{display:none}
 @keyframes trise{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
@@ -1181,7 +1181,7 @@ button.view-all{display:block;width:100%;text-align:center}
    page + guest list automatically.
    ===================================================================== */
 
-var TODAY = '2021-07-31';           // mock "today"
+var TODAY = '2021-07-31';           // sample-data "today"; goLiveClock() swaps in the real date once Firestore connects
 var AV = function(seed){ return 'https://picsum.photos/seed/'+seed+'/140/140'; };
 var IMG = function(seed,w,h){ return 'https://picsum.photos/seed/'+seed+'/'+w+'/'+h; };
 /* generic grey person avatar — every real (non-sample) profile without a photo */
@@ -1555,7 +1555,10 @@ function myUids(){
 /* my answer for an event \u2014 mine first, then anything a linked uid said */
 function myPlus(id){
   var m = loadMe();
-  return m.plus[id] || 0;
+  if(m.plus[id]) return m.plus[id];
+  var lp = linkedProfiles(), i;
+  for(i = 0; i < lp.length; i++) if(lp[i].plus && lp[i].plus[id]) return lp[i].plus[id];
+  return 0;
 }
 function myRsvp(id){
   var m = loadMe();
@@ -1602,12 +1605,6 @@ function saveMe(){
 loadMe();
 
 function findEvent(key){ return STORE.byId[key] || null; }
-
-var GUEST_MENU =
-  '<button type="button" role="menuitem"><svg class="i"><use href="#check"/></svg>Change RSVP Status</button>' +
-  '<button type="button" role="menuitem"><svg class="i"><use href="#chat-dots"/></svg>Message Guest</button>' +
-  '<button type="button" role="menuitem"><svg class="i"><use href="#person"/></svg>View Profile</button>' +
-  '<button type="button" role="menuitem" class="danger"><svg class="i"><use href="#trash"/></svg>Remove Invitation</button>';
 
 /* ---------- time ---------- */
 function ago(isoTs){
@@ -1663,7 +1660,8 @@ function docToModel(id, d){
     visibility: d.visibility || "", visibilityMode: d.visibilityMode || "",
     reminders: d.reminders || [], reminderLabel: d.reminderLabel || "",
     notifyChanges: d.notifyChanges !== false,
-    dot: d.dot || "#6d28d9",
+    /* rides into style attributes unescaped, so only a colour is allowed */
+    dot: /^#[0-9a-fA-F]{3,8}$/.test(d.dot || "") ? d.dot : "#6d28d9",
     /* hosting is in the eye of the viewer: an event is yours only when its
        hostUid is one of your linked uids */
     role: (d.hostUid && myUids().indexOf(d.hostUid) > -1) ? "hosting" : "invited",
@@ -1783,6 +1781,25 @@ function hiddenCount(){
 }
 function shown(list){ return list.filter(function(e){ return !isHidden(e); }); }
 
+/* ---------- chat read tracking ----------
+   Per-viewer, per-event count of messages already seen; the unread badge is
+   whatever arrived past that mark. Stored locally — "read" is in the eye of
+   the viewer, never on the shared event. */
+var SEEN_KEY = 'd2c.seen.v1', SEEN = null;
+function seenMap(){
+  if(SEEN) return SEEN;
+  try{ SEEN = JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; }catch(e){ SEEN = {}; }
+  return SEEN;
+}
+function markSeen(id, n){
+  if(seenMap()[id] === n) return;
+  SEEN[id] = n;
+  try{ localStorage.setItem(SEEN_KEY, JSON.stringify(SEEN)); }catch(e){}
+}
+function unseenCount(ev){
+  return Math.max(0, (ev.messages || []).length - (seenMap()[ev.id] || 0));
+}
+
 /* An event is on your page only if you host it or one of your linked uids
    opened it by direct link (any RSVP counts — a "can't go" stays visible so
    you can change your mind). Everything else stays invisible. */
@@ -1806,7 +1823,7 @@ function hosting(){ return mineOnly(STORE.events.filter(function(e){ return e.ro
 function h(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
 function ico(id,cls){ return '<svg class="i'+(cls?' '+cls:'')+'"><use href="#'+id+'"/></svg>'; }
-function img(url,alt,cls){ return '<img'+(cls?' class="'+cls+'"':'')+' src="'+(url||'')+'" alt="'+
+function img(url,alt,cls){ return '<img'+(cls?' class="'+cls+'"':'')+' src="'+h(url||'')+'" alt="'+
   h(alt||'')+'" loading="lazy" decoding="async">'; }
 function fname(n){ return String(n||'').split(' ')[0]; }
 var _toastT=null;
@@ -1956,6 +1973,13 @@ function renderHome(tab,q,open){
 
 /* ================= CALENDAR ================= */
 var calState={ y:2021, m:6, sel:TODAY, mode:'month', q:'', open:1 };
+/* live data runs on the real clock — the mock date only serves the bundled
+   sample set. Called once, just before the first live paint. */
+function goLiveClock(){
+  TODAY = isoOf(new Date());
+  var d = parse(TODAY);
+  calState.y = d.getFullYear(); calState.m = d.getMonth(); calState.sel = TODAY;
+}
 
 function calCell(iso,out,q,maxLab){
   var evs=out?[]:eventsOn(iso,q), sel=(!out && iso===calState.sel), d=parse(iso);
@@ -2031,7 +2055,8 @@ function renderCalendar(){
       '<div class="moon"></div>'+
       '<div class="page-h"><h1>Calendar</h1><div class="btns">'+
         '<button class="round-btn" type="button" data-toggle-search aria-label="Search events">'+ico('search')+'</button>'+
-        '<button class="round-btn" type="button" aria-label="Filters">'+ico('sliders')+'</button>'+
+        /* filters is parked for now — unhide when it does something */
+        '<button class="round-btn" type="button" aria-label="Filters" style="display:none">'+ico('sliders')+'</button>'+
       '</div></div>'+
       '<div class="segs" role="tablist">'+
         '<button role="tab" type="button" data-mode="month" aria-selected="'+(calState.mode==='month')+'">Month</button>'+
@@ -2074,10 +2099,10 @@ function renderEvent(id){
         h(ev.lastPhotoLabel)+'</p>'
     : skel('Loading photos\u2026');
 
-  var last = (ev.messages||[])[ (ev.messages||[]).length-1 ];
+  var last = (ev.messages||[])[ (ev.messages||[]).length-1 ], unseen = unseenCount(ev);
   var chatBlock = last
     ? '<div class="chat-card"><div class="av-wrap">'+img(last.fromAvatarUrl,'')+
-        (ev.chatUnread?'<span class="badge">'+ev.chatUnread+'</span>':'')+'</div>'+
+        (unseen?'<span class="badge">'+unseen+'</span>':'')+'</div>'+
         '<div class="chat-txt"><b>'+h(fname(last.fromName))+'</b><p>'+
         h(last.text || (last.imageUrl?'📷 Photo':''))+
         '</p><small>'+h(ago(last.at))+'</small></div>'+
@@ -2123,17 +2148,25 @@ function renderEvent(id){
           '&nbsp; \u00B7 &nbsp;'+h(ev.time)+'</div></div>'+
         '<div class="row place">'+ico('pin')+'<div><b>'+h(ev.venue)+'</b><span>'+h(ev.address)+'</span></div></div>'+
       '</div>'+
-      '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
-        '<div class="rsvp" id="rsvp" data-going="'+c.going+'" data-maybe="'+c.maybe+'" data-cant="'+c.cant+'">'+
-          '<button type="button" data-k="going" aria-pressed="'+(myRsvp(ev.id)==='going')+'">'+ico('check')+'Going</button>'+
-          '<button type="button" data-k="maybe" aria-pressed="'+(myRsvp(ev.id)==='maybe')+'">'+ico('help')+'Maybe</button>'+
-          '<button type="button" data-k="cant" aria-pressed="'+(myRsvp(ev.id)==='cant')+'">'+ico('x')+'Can\u2019t Go</button>'+
-        '</div>'+
-        '<p class="tally"><b id="c-going">'+c.going+'</b> Going <i>\u00B7</i> <b id="c-maybe">'+c.maybe+
-          '</b> Maybe <i>\u00B7</i> <b id="c-cant">'+c.cant+'</b> Can\u2019t Go</p>'+
-        '<p class="note">You can update your RSVP anytime.</p>'+
-        '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
-      '</section>'+
+      /* the host never RSVPs \u2014 they are going by definition, so no buttons */
+      (ev.role==='hosting'
+        ? '<section class="sec"><div class="sec-h"><h2>RSVPs</h2></div>'+
+          '<p class="tally"><b id="c-going">'+c.going+'</b> Going <i>\u00B7</i> <b id="c-maybe">'+c.maybe+
+            '</b> Maybe <i>\u00B7</i> <b id="c-cant">'+c.cant+'</b> Can\u2019t Go</p>'+
+          '<p class="note">You\u2019re hosting, so you\u2019re already counted in.</p>'+
+          '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
+        '</section>'
+        : '<section class="sec"><div class="sec-h"><h2>Your RSVP</h2></div>'+
+          '<div class="rsvp" id="rsvp" data-going="'+c.going+'" data-maybe="'+c.maybe+'" data-cant="'+c.cant+'">'+
+            '<button type="button" data-k="going" aria-pressed="'+(myRsvp(ev.id)==='going')+'">'+ico('check')+'Going</button>'+
+            '<button type="button" data-k="maybe" aria-pressed="'+(myRsvp(ev.id)==='maybe')+'">'+ico('help')+'Maybe</button>'+
+            '<button type="button" data-k="cant" aria-pressed="'+(myRsvp(ev.id)==='cant')+'">'+ico('x')+'Can\u2019t Go</button>'+
+          '</div>'+
+          '<p class="tally"><b id="c-going">'+c.going+'</b> Going <i>\u00B7</i> <b id="c-maybe">'+c.maybe+
+            '</b> Maybe <i>\u00B7</i> <b id="c-cant">'+c.cant+'</b> Can\u2019t Go</p>'+
+          '<p class="note">You can update your RSVP anytime.</p>'+
+          '<div id="plus-slot">'+plusRowInner(ev)+'</div>'+
+        '</section>')+
       '<section class="sec"><div class="sec-h"><h2>About</h2></div>'+
         '<p class="about">'+h(ev.about)+'</p>'+
         vibeShow(ev)+
@@ -2264,11 +2297,15 @@ function renderGuests(id){
       '<span class="g-end">'+(g.isYou?'<em>You</em>':'')+ico('chev')+'</span></div>';
   }
   function waitRow(g){
+    /* only the host manages invitations, so only the host gets the menu */
     return '<div class="g-row"><span class="g-av">'+img(g.avatarUrl,'')+'</span>'+
       '<div class="g-txt"><div class="g-name"><b>'+h(g.name)+'</b></div>'+
         '<small>'+h(g.invitedLabel)+'</small></div>'+
-      '<span class="g-end"><button class="dots" type="button" aria-haspopup="true" aria-expanded="false" '+
-      'aria-label="Options for '+h(g.name)+'">'+ico('more')+'</button></span></div>';
+      (ev.role==='hosting'
+        ? '<span class="g-end"><button class="dots" type="button" data-gdots="'+h(g.name)+
+          '" aria-haspopup="true" aria-expanded="false" aria-label="Options for '+h(g.name)+'">'+
+          ico('more')+'</button></span>'
+        : '')+'</div>';
   }
 
   function section(key, label, rows, rowFn, sub){
@@ -2297,7 +2334,8 @@ function renderGuests(id){
       brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="event" data-share-id="'+ev.id+
         '" aria-label="Share event">'+ico('share')+'</button>'+
-      '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
+      '<button class="icon-btn" type="button" data-evmenu="'+ev.id+'" aria-haspopup="true" '+
+        'aria-expanded="false" aria-label="More options">'+ico('more')+'</button>'+
       profBtn()+
     '</header>'+
     '<h1 class="title">Guests</h1>'+
@@ -2316,7 +2354,8 @@ function renderGuests(id){
       '<p>Anyone with the link can request an invitation.</p></div>'+
       '<button class="ghost" type="button" data-share-kind="event" data-share-id="'+ev.id+'">'+
         ico('link')+'Copy Link</button></div>'+
-      '<button class="regen" type="button">'+ico('refresh')+'Regenerate Link</button></section>'+
+      /* parked until the backend can rotate links — unhide when it can */
+      '<button class="regen" type="button" style="display:none">'+ico('refresh')+'Regenerate Link</button></section>'+
   '</div>';
 }
 
@@ -2340,7 +2379,8 @@ function renderPhotos(id){
       brandMark()+'<div class="sp"></div>'+
       '<button class="icon-btn" type="button" data-share-kind="album" data-share-id="'+ev.id+
         '" aria-label="Share album">'+ico('share')+'</button>'+
-      '<button class="icon-btn" type="button" aria-label="More options">'+ico('more')+'</button>'+
+      '<button class="icon-btn" type="button" data-evmenu="'+ev.id+'" aria-haspopup="true" '+
+        'aria-expanded="false" aria-label="More options">'+ico('more')+'</button>'+
       profBtn()+
     '</header>'+
     '<h1 class="title">Photos</h1>'+
@@ -2360,7 +2400,7 @@ function lightbox(ev,i){
     '<div class="lb-stage">'+
       '<button class="lb-arrow prev" type="button" data-lb-step="-1" aria-label="Previous photo">'+
         ico('chevl')+'</button>'+
-      '<img src="'+ph.url+'" alt="Photo '+(i+1)+' by '+h(ph.byName)+'">'+
+      '<img src="'+h(ph.url)+'" alt="Photo '+(i+1)+' by '+h(ph.byName)+'">'+
       '<button class="lb-arrow next" type="button" data-lb-step="1" aria-label="Next photo">'+
         ico('chev')+'</button>'+
     '</div>'+
@@ -2372,6 +2412,7 @@ function lightbox(ev,i){
 function renderChat(id){
   var ev=findEvent(id); if(!ev) return renderHome();
   var msgs=ev.messages||[];
+  markSeen(ev.id, msgs.length);        /* viewing the thread clears the badge */
   var body = msgs.length
     ? '<div class="thread">'+msgs.map(function(m){
         return '<div class="msg'+(m.isYou?' me':'')+'">'+
@@ -2404,7 +2445,7 @@ function composer(id){
       ico('image')+'</button>'+
     '<input type="text" id="msg-in" placeholder="Message the group\u2026" aria-label="Write a message" '+
       'autocomplete="off" data-event="'+id+'">'+
-    '<button type="button" id="msg-send" data-event="'+id+'" aria-label="Send">'+ico('nav')+'</button>'+
+    '<button type="button" id="msg-send" data-event="'+id+'" aria-label="Send" disabled>'+ico('nav')+'</button>'+
   '</div></div>';
 }
 
@@ -2456,10 +2497,10 @@ function renderDebug(){
 }
 
 /* ================= CREATE EVENT =================
-   Two steps, both rendered from one DRAFT object that is mirrored into
+   Four steps, all rendered from one DRAFT object that is mirrored into
    localStorage. Every control writes straight into DRAFT, so a repaint (or a
-   reload, or "Save Draft") never loses what has been typed. Step 2's Save
-   Event writes the real Firestore document; the cover photo is uploaded to
+   reload, or "Save Draft") never loses what has been typed. Step 4's Invite
+   Guests writes the real Firestore document; the cover photo is uploaded to
    Cloud Storage the moment it is chosen.
    =============================================== */
 
@@ -2508,6 +2549,8 @@ function saveEventDraft(){
   var d = loadDraft(), list = eventDrafts(), snap = {}, k, i;
   if(!d.draftId) d.draftId = 'dft-' + Date.now().toString(36);
   for(k in d) if(k.charAt(0) !== '_') snap[k] = d[k];
+  /* a blob: preview dies with the session — the card would render broken */
+  if(!snap.coverPath && /^blob:/.test(snap.coverUrl || '')) snap.coverUrl = '';
   for(i = 0; i < list.length; i++) if(list[i].draftId === d.draftId) break;
   list[i] = snap;
   writeEventDrafts(list);
@@ -2612,7 +2655,7 @@ function createHead(step){
 function createFoot(step){
   if(step === 4) return inviteFoot();
   var cta = step === 1 ? ['data-cnext','Continue']
-          : step === 2 ? ['data-csave','Save Event']
+          : step === 2 ? ['data-cnext2','Continue']
           :              ['data-cnext3','Continue'];
   return '<div class="cbar-foot"><div class="cbar-in">' +
       '<span>Step ' + step + ' of 4</span>' +
@@ -2649,7 +2692,7 @@ function whenBlock(d){
   var s = '<div class="duo">' +
       '<div><span class="lab">Date</span>' +
         '<div class="pick">' + ico('cal-p') + '<b>' + h(dateLabel(d.date)) + '</b>' + ico('chev','cv') +
-        '<input type="date" id="c-date" value="' + h(d.date) + '" aria-label="Event date"></div></div>' +
+        '<input type="date" id="c-date" value="' + h(d.date) + '" min="' + isoOf(new Date()) + '" aria-label="Event date"></div></div>' +
       '<div><span class="lab">Time</span>' + timePick('c-time','Start time',d.time) + '</div>' +
     '</div>';
   if(d.endTime == null)
@@ -2871,7 +2914,8 @@ function cardRsvp(d){
       'unless the host reopens responses.</p>' +
     (d.rsvpMode === 'custom'
       ? '<div class="pick datebox">' + ico('cal-p') + '<b>' + h(dateLabel(rsvpDate(d))) + '</b>' +
-        '<input type="date" id="c-rsvp" value="' + h(rsvpDate(d)) + '" aria-label="RSVP deadline"></div>'
+        '<input type="date" id="c-rsvp" value="' + h(rsvpDate(d)) + '" min="' + isoOf(new Date()) +
+        '" max="' + h(d.date) + '" aria-label="RSVP deadline"></div>'
       : ''));
 }
 function cardEntry(d){
@@ -2985,7 +3029,8 @@ function step2Settings(d){
         withCurrent(['Not allowed','Allowed','+2 each','+3 each'], plusLabel(d))) +
       '<div class="srow"><span class="sic">' + ico('cal-p') + '</span><b>RSVP Deadline</b>' +
         '<span class="sval">' + h(rsvpLabel(d)) + '</span>' + ico('chev','cv') +
-        '<input type="date" id="c-rsvp2" value="' + h(rsvpDate(d) || d.date) + '" aria-label="RSVP deadline">' +
+        '<input type="date" id="c-rsvp2" value="' + h(rsvpDate(d) || d.date) + '" min="' + isoOf(new Date()) +
+        '" max="' + h(d.date) + '" aria-label="RSVP deadline">' +
       '</div>' +
       p2Row('entry','dollar','Entry Cost', entryLabel(d),
         withCurrent(['Free','Pay at event'], entryLabel(d))) +
@@ -3423,7 +3468,8 @@ function inviteFoot(){
             '<span class="ftx"><b>' + n + (n === 1 ? ' guest selected' : ' guests selected') + '</b>' +
             '<span>Invitations send when the event is created.</span></span></span>'
          : '<span>Step 4 of 4</span>') +
-      '<button class="cta" type="button" id="c-cta" data-cinvite>Invite Guests' + ico('chev') + '</button>' +
+      '<button class="cta" type="button" id="c-cta" data-cinvite>' +
+        (n ? 'Invite Guests' : 'Create Event') + ico('chev') + '</button>' +
     '</div></div>';
 }
 
@@ -3558,10 +3604,12 @@ function takeCover(file){
     toast('Local preview only \u2014 connect Firebase to upload.', 'err', 4500);
     return;
   }
+  var oldPath = d.coverPath;
   coverBusy(0);
   D2C.uploadCover(file, coverBusy).then(function(r){
     if(d._objUrl){ URL.revokeObjectURL(d._objUrl); d._objUrl = null; }
     d.coverUrl = r.url; d.coverPath = r.path;
+    if(oldPath && D2C.deleteFile) D2C.deleteFile(oldPath);   /* the replaced file */
     saveDraft(); repaintCover();
     toast('Cover photo uploaded');
   }).catch(function(e){
@@ -3571,6 +3619,7 @@ function takeCover(file){
 }
 function dropCover(d){
   if(d._objUrl){ URL.revokeObjectURL(d._objUrl); d._objUrl = null; }
+  if(d.coverPath && window.D2C && D2C.deleteFile) D2C.deleteFile(d.coverPath);
   d.coverUrl = ''; d.coverPath = '';
   saveDraft(); repaintCover();
 }
@@ -3589,8 +3638,11 @@ function draftBase(d, id, hostUid){
     venue: d.venue.trim(), address: d.address.trim(), about: d.about.trim(),
     vibe: d.vibes.length ? d.vibes.join(' \u00B7 ') : 'Chill', vibes: d.vibes.slice(),
     dot: vibeDot(d.vibes), role: 'hosting',
-    coverPath: d.coverPath || '', coverUrl: d.coverUrl || '',
-    thumbUrl: d.coverUrl || '', mapPath: '', mapUrl: '',
+    /* a blob: preview is session-local — never let one into the document */
+    coverPath: d.coverPath || '',
+    coverUrl: /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
+    thumbUrl: /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
+    mapPath: '', mapUrl: '',
     hostUid: hostUid || '', hostName: me.name, hostAvatarUrl: me.av,
     counts: { going: 1, maybe: 0, cant: 0, pending: invitedList(d).length },
     invitedUids: d.invitees.slice(), invitedGuests: invitedList(d),
@@ -3700,6 +3752,7 @@ function claimCard(ev){
     '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
     '<div class="modal-ic">\uD83D\uDC4B</div>' +
     '<h3 id="modal-h">Who are you?</h3>' +
+    (ev.inviteMessage ? '<p>\u201C' + h(ev.inviteMessage) + '\u201D</p>' : '') +
     (rows
       ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name, or type it below.</p>' +
         '<div class="claim-list">' + rows + '</div><div class="claim-or"><span>or</span></div>'
@@ -3929,8 +3982,9 @@ function eventDock(id){
     if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ,homeSearch); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
     else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(r.id); }
-    else if(r.v==='chat'){     app.innerHTML=renderChat(r.id);  chrome.innerHTML=composer(r.id);
-                               scrollThread(); }
+    else if(r.v==='chat'){     var stick=curKeyChanged || app.scrollHeight-app.scrollTop-app.clientHeight<80;
+                               app.innerHTML=renderChat(r.id);  chrome.innerHTML=composer(r.id);
+                               if(stick) scrollThread(); }
     else if(r.v==='photos'){   app.innerHTML=renderPhotos(r.id);chrome.innerHTML=''; }
     else if(r.v==='debug'){    app.innerHTML=renderDebug();     chrome.innerHTML=bottomNav(''); }
     else if(r.v==='profile'){  app.innerHTML=renderProfile();  chrome.innerHTML=bottomNav('profile'); }
@@ -3944,6 +3998,7 @@ function eventDock(id){
     document.body.className = (r.v==='event') ? 'has-dock'
                             : (r.v==='create'||r.v==='edit') ? 'has-cbar'
                             : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
+    if(!modal.hidden) document.body.classList.add('modal-open');   /* survives the reset */
     var cSheet=modal.querySelector('[data-claimfor]');
     if(cSheet && r.v==='event' && cSheet.dataset.claimfor===r.id){
       var cInp=document.getElementById('claim-name'),
@@ -3960,8 +4015,15 @@ function eventDock(id){
 
     curKey=key;
     var restore = curKeyChanged ? (scrolls[key]!=null ? scrolls[key] : 0) : app.scrollTop;
-    if(r.v==='chat') return;   // chat manages its own scroll (pinned to newest)
-    if(curKeyChanged) app.scrollTop = (r.v==='guests'||r.v==='photos') ? 0 : restore;
+    if(r.v==='chat') return;   // chat manages its own scroll (pinned while at the newest)
+    if(curKeyChanged) jump((r.v==='guests'||r.v==='photos') ? 0 : restore);
+  }
+
+  /* programmatic scrolls are instant — CSS smooth-behavior is for the user */
+  function jump(y){
+    app.style.scrollBehavior='auto';
+    app.scrollTop=y;
+    app.style.scrollBehavior='';
   }
 
   /* same view slot, new hash — no extra history entry */
@@ -4042,6 +4104,9 @@ function eventDock(id){
     }
     var ddel=t.closest('[data-draftdel]');
     if(ddel){
+      var dd=eventDrafts().filter(function(x){ return x.draftId===ddel.dataset.draftdel; })[0];
+      /* a draft's uploaded cover belongs to nothing else — clean it up */
+      if(dd && dd.coverPath && window.D2C && D2C.deleteFile) D2C.deleteFile(dd.coverPath);
       deleteEventDraft(ddel.dataset.draftdel);
       toast('Draft deleted'); render(); return;
     }
@@ -4055,7 +4120,7 @@ function eventDock(id){
       if(er){ toast(er[0],'err'); var bad=document.getElementById(er[1]); if(bad) bad.focus(); return; }
       saveDraft(); swapHash('#create/2'); return;
     }
-    if(t.closest('[data-csave]')){ saveDraft(); swapHash('#create/3'); return; }
+    if(t.closest('[data-cnext2]')){ saveDraft(); swapHash('#create/3'); return; }
     if(t.closest('[data-cnext3]')){ saveDraft(); swapHash('#create/4'); return; }
     if(t.closest('[data-editcancel]')){ leaveEdit(); return; }
     var esave=t.closest('[data-editsave]');
@@ -4360,14 +4425,21 @@ function eventDock(id){
     var rs=t.closest('#rsvp button[data-k]');
     if(rs){ rsvp(rs); return; }
 
-    var dots=t.closest('.dots');
+    var dots=t.closest('[data-gdots]');
     if(dots){
       e.stopPropagation();
       if(anchor===dots){ closeMenu(); return; }
       closeMenu();
-      menu.innerHTML=GUEST_MENU; menuEvent=null;
+      menu.innerHTML='<button type="button" role="menuitem" class="danger" data-gremove>'+
+        ico('trash')+'Remove Invitation</button>';
+      menuEvent=null; menuGuest={ id:route().id, name:dots.dataset.gdots };
       anchor=dots; dots.setAttribute('aria-expanded','true');
       placeMenu(dots); return;
+    }
+    if(t.closest('[data-gremove]')){
+      var mg=menuGuest; closeMenu();
+      if(mg) askRemoveInvite(mg.id, mg.name);
+      return;
     }
     if(!t.closest('#row-menu')) closeMenu();
   });
@@ -4400,6 +4472,11 @@ function eventDock(id){
     if(e.key==='Enter' && e.target.id==='msg-in'){ e.preventDefault(); sendMsg(e.target.dataset.event); }
     if(e.key==='Enter' && e.target.id==='c-add'){ e.preventDefault(); commitAdd(true); }
     if(e.key==='Enter' && e.target.id==='inv-add'){ e.preventDefault(); commitInvite(true); }
+    /* spans/divs with role="button" don't click from the keyboard on their own */
+    if((e.key==='Enter'||e.key===' ') && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){
+      var rb=e.target.closest && e.target.closest('[role="button"]');
+      if(rb && rb.tagName!=='BUTTON' && rb.tagName!=='A'){ e.preventDefault(); rb.click(); }
+    }
   });
 
   document.addEventListener('input',function(e){
@@ -4441,6 +4518,11 @@ function eventDock(id){
       saveDraft();
       var chd=e.target.closest('.sec3'), csv=chd&&chd.querySelector('.sval');
       if(csv) csv.textContent=capLabel(cd2);
+      return;
+    }
+    if(e.target.id==='msg-in'){
+      var sb=document.getElementById('msg-send');
+      if(sb) sb.disabled=!e.target.value.trim();
       return;
     }
     if(e.target.id==='q-invite'){
@@ -4847,22 +4929,31 @@ function eventDock(id){
     copyLink(url);
   }
   function copyLink(url){
+    var legacy=function(){
+      var ta=document.createElement('textarea');
+      ta.value=url; ta.style.cssText='position:fixed;opacity:0';
+      document.body.appendChild(ta); ta.select();
+      var ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+      ta.remove();
+      if(ok) toast('Link copied'); else toast(url,'',8000);
+    };
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(url)
         .then(function(){ toast('Link copied'); })
-        .catch(function(){ toast(url,'err',5000); });
-    } else toast(url,'err',5000);
+        .catch(legacy);
+    } else legacy();
   }
 
   /* ---------- chat ---------- */
   function scrollThread(){
-    requestAnimationFrame(function(){ var a=document.getElementById('app'); a.scrollTop=a.scrollHeight; });
+    requestAnimationFrame(function(){ jump(app.scrollHeight); });
   }
   function sendMsg(id){
     var input=document.getElementById('msg-in');
     if(!input) return;
     var text=input.value.trim(); if(!text) return;
     input.value='';
+    var sb=document.getElementById('msg-send'); if(sb) sb.disabled=true;
     if(STORE.mode==='live' && window.D2C && D2C.sendMessage){
       D2C.sendMessage(id, text).catch(function(e){ toast(e.message||'Could not send','err'); });
     } else {
@@ -4941,25 +5032,38 @@ function eventDock(id){
     function up(){
       document.removeEventListener('pointermove',mv);
       document.removeEventListener('pointerup',up);
+      document.removeEventListener('pointercancel',up);
       setTimeout(function(){ st.classList.remove('drag'); },0);
     }
     document.addEventListener('pointermove',mv);
     document.addEventListener('pointerup',up);
+    document.addEventListener('pointercancel',up);
   });
 
   function rsvp(btn){
-    var box=btn.parentNode, k=btn.dataset.k, id=route().id,
+    var box=btn.parentNode, k=btn.dataset.k, id=route().id, ev=findEvent(id),
         cur=box.querySelector('[aria-pressed="true"]');
     if(cur===btn) return;
+    if(ev){
+      if(ev.role==='hosting') return;          /* hosts are going by definition */
+      if(ev.rsvpBy && TODAY>ev.rsvpBy){
+        toast('RSVPs closed on '+dateLabel(ev.rsvpBy)+' — ask the host to reopen them.','err',4500);
+        return;
+      }
+      /* capacity counts guests only; the host rides on top of it */
+      if(k==='going' && ev.capacityMax>0 && ev.counts.going>ev.capacityMax){
+        toast('This event is full ('+ev.capacityMax+' guests).','err',4000);
+        return;
+      }
+    }
     var m=loadMe();
     if(!m.name){
-      var gev=findEvent(id);
       pendingRsvp={ id:id, k:k };
-      if(gev){ modal.innerHTML=claimCard(gev); modal.hidden=false;
-               document.body.classList.add('modal-open'); }
+      if(ev){ modal.innerHTML=claimCard(ev); modal.hidden=false;
+              document.body.classList.add('modal-open'); }
       return;
     }
-    var prev=m.rsvp[id]||'';
+    var prev=myRsvp(id)||'';
     var n={going:+box.dataset.going, maybe:+box.dataset.maybe, cant:+box.dataset.cant};
     if(cur) n[cur.dataset.k]--;
     n[k]++;
@@ -4974,7 +5078,6 @@ function eventDock(id){
     m.rsvp[id]=k;
     if(m.events.indexOf(id)<0) m.events.push(id);
     saveMe();
-    var ev=findEvent(id);
     if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant};
     var pslot=document.getElementById('plus-slot');
     if(pslot && ev) pslot.innerHTML=plusRowInner(ev);
@@ -4990,7 +5093,7 @@ function eventDock(id){
   }
 
   /* ---------- event menu ---------- */
-  var menuEvent=null, confirmFn=null;
+  var menuEvent=null, menuGuest=null, confirmFn=null;
   function mItem(act,icon,label,danger){
     return '<button type="button" role="menuitem"'+(danger?' class="danger"':'')+
       ' data-emenu="'+act+'">'+ico(icon)+label+'</button>';
@@ -5002,9 +5105,8 @@ function eventDock(id){
     if(!ev) return;
     if(anchor===btn){ closeMenu(); return; }
     closeMenu();
-    var onCard = !!btn.closest('.ecard'),
-        ctx = onCard ? homeTab
-            : ev.role==='hosting' ? 'hosting'
+    /* the menu follows the event, not the tab it happens to sit on */
+    var ctx = ev.role==='hosting' ? 'hosting'
             : ev.dateISO<TODAY ? 'past' : 'upcoming';
     menu.innerHTML =
       ctx==='hosting' ? mItem('edit','pen','Edit event')+
@@ -5096,6 +5198,33 @@ function eventDock(id){
     after();
   }
 
+  /* ---------- withdrawing an invitation (host only) ---------- */
+  function askRemoveInvite(id, name){
+    var ev=findEvent(id); if(!ev || !name) return;
+    confirmFn=function(){ doRemoveInvite(id, name); };
+    modal.innerHTML=confirmCard('Remove “'+name+'”?',
+      'Their invitation is withdrawn and they leave the waiting list. You can invite them again anytime.',
+      'Remove invitation');
+    modal.hidden=false;
+    document.body.classList.add('modal-open');
+    var c=modal.querySelector('[data-confirm-yes]'); if(c) c.focus();
+  }
+  function doRemoveInvite(id, name){
+    var ev=findEvent(id); if(!ev) return;
+    if(STORE.mode==='live' && window.D2C && D2C.removeGuest){
+      toast('Removing…','wait',0);
+      D2C.removeGuest(ev.id, name)
+        .then(function(){ toast('Invitation removed'); })
+        .catch(function(e){ toast((e&&e.message)||'Could not remove the invitation','err',4500); });
+      return;
+    }
+    var low=name.toLowerCase();
+    ev.waiting=(ev.waiting||[]).filter(function(g){ return (g.name||'').toLowerCase()!==low; });
+    if(ev.counts && ev.counts.pending>0) ev.counts.pending--;
+    STORE.notify();
+    toast('Invitation removed');
+  }
+
   function closeMenu(){
     menu.hidden=true;
     /* park it back on <body> — its last parent may be about to be re-rendered */
@@ -5124,7 +5253,7 @@ function eventDock(id){
     if(rv==='create'||(rv==='edit'&&EDIT)) return;
     var y=app.scrollTop;
     render();
-    app.scrollTop=y;
+    jump(y);
   });
 
   /* the other device keeps opening events after we linked — pull the fresh
@@ -5634,6 +5763,23 @@ async function createEvent(draft){
 }
 
 /* ---------------- 5. edit / delete ---------------- */
+/* best-effort recursive delete of one Storage folder */
+async function wipeFolder(path){
+  const { storage, st } = await initFirebase();
+  try {
+    const res = await st.listAll(st.ref(storage, path));
+    await Promise.all(res.items.map(i => st.deleteObject(i).catch(() => {})));
+    await Promise.all(res.prefixes.map(p => wipeFolder(p.fullPath)));
+  } catch(e){ warn("storage cleanup " + path + " (" + (e.code || e.message) + ")"); }
+}
+/* best-effort delete of one Storage file (replaced covers, deleted drafts) */
+async function deleteFile(path){
+  try {
+    const { storage, st } = await initFirebase();
+    await st.deleteObject(st.ref(storage, path));
+  } catch(e){ /* already gone, or rules said no — either way not fatal */ }
+}
+
 async function updateEvent(id, patch){
   const { db, fs } = await initFirebase();
   patch = Object.assign({}, patch, { updatedAt: fs.serverTimestamp() });
@@ -5656,6 +5802,10 @@ async function deleteEvent(id){
     await Promise.all(snap.docs.map(d => fs.deleteDoc(d.ref)));
   }
   await fs.deleteDoc(evRef);
+
+  /* Storage doesn't cascade either — the event's album and chat pictures */
+  await wipeFolder(PHOTO_ROOT + "/" + id);
+  await wipeFolder(CHAT_ROOT + "/" + id);
 
   if(cover){
     try { await st.deleteObject(st.ref(storage, cover)); }
@@ -5735,6 +5885,19 @@ async function inviteGuests(eventId, list){
   ok(list.length + " invite(s) written to " + FS_ROOT.join("/") + "/events/" + eventId + "/guests");
 }
 
+/* ---------------- the host withdraws an invitation ----------------
+   Pending rows are name-keyed (curated invites carry no visitor uid), so
+   every pending doc under that name goes, and the counter follows. */
+async function removeGuest(eventId, name){
+  const { db, fs } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  const snap = await fs.getDocs(fs.query(fs.collection(evRef, "guests"),
+    fs.where("status", "==", "pending"), fs.where("name", "==", name)));
+  await Promise.all(snap.docs.map(d => fs.deleteDoc(d.ref)));
+  if(snap.size) await fs.updateDoc(evRef, { "counts.pending": fs.increment(-snap.size) });
+  logActivity(eventId, "x", "removed an invitation");
+}
+
 /* ---------------- a named viewer joins the waiting list ---------------- */
 async function announceGuest(eventId){
   const { db, fs } = await initFirebase();
@@ -5805,12 +5968,14 @@ async function connectLive(){
       : "Firebase not configured — showing bundled sample data.");
     return;
   }
+  if(unsubEvents){ try{ unsubEvents(); }catch(e){} unsubEvents = null; }
   try {
     const { db, fs } = await initFirebase();
     // Every event document, ordered by date, streamed continuously.
     unsubEvents = fs.onSnapshot(
       fs.query(fs.collection(db, ...FS_ROOT, "events"), fs.orderBy("dateISO")),
       snap => {
+        if(STORE.mode !== "live" && window.goLiveClock) goLiveClock();   // real clock from the first live paint
         STORE.setEvents(snap.docs.map(d => docToModel(d.id, d.data())), "live");
         dim("events snapshot: " + snap.size + " docs" +
             (snap.metadata.fromCache ? " (cache)" : ""));
@@ -5915,7 +6080,8 @@ async function sendImage(eventId, file){
 }
 
 window.D2C = {
-  pickPhoto, sendMessage, sendImage, inviteGuests, uploadCover, createEvent, updateEvent, deleteEvent,
+  pickPhoto, sendMessage, sendImage, inviteGuests, removeGuest, uploadCover, deleteFile,
+  createEvent, updateEvent, deleteEvent,
   saveProfile, findByPhone, setRsvp, setPlus, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
