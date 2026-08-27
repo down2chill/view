@@ -659,7 +659,7 @@ textarea.inp{height:auto;min-height:158px;padding:16px 18px 40px;line-height:1.6
 .waddr::placeholder{color:var(--muted-2)}
 
 /* vibe picker */
-.vibes{display:grid;grid-template-columns:repeat(7,1fr);gap:clamp(6px,2.3vw,15px)}
+.vibes{display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(6px,2.3vw,15px)}
 .vibe{display:flex;flex-direction:column;align-items:center;gap:9px;min-width:0}
 .vtile{position:relative;width:100%;max-width:78px;aspect-ratio:1;border-radius:20px;
   display:grid;place-items:center;transition:transform .16s,box-shadow .16s}
@@ -1057,7 +1057,7 @@ button.view-all{display:block;width:100%;text-align:center}
   .sic{width:44px;height:44px;border-radius:13px}
   .sval{max-width:54%}
   .cbar-in{gap:12px}
-  .vibes{grid-template-columns:repeat(4,1fr);gap:6px}
+  .vibes{grid-template-columns:repeat(3,1fr);gap:6px}
   .vtile{border-radius:16px}
 }
 @media (max-width:380px){
@@ -1158,6 +1158,8 @@ button.view-all{display:block;width:100%;text-align:center}
 <symbol id="v-chill" viewBox="20.99 25.75 35.58 21.75" fill="currentColor" stroke="none"><path d="M30.1334 34.8952V38.3532H47.4238V34.8952C47.4238 32.9878 48.9745 31.4371 50.8818 31.4371H52.6109C52.6109 28.5734 50.2875 26.25 47.4238 26.25H30.1334C27.2697 26.25 24.9463 28.5734 24.9463 31.4371H26.6754C28.5827 31.4371 30.1334 32.9878 30.1334 34.8952ZM52.6109 33.1661H50.8818C49.9255 33.1661 49.1528 33.9388 49.1528 34.8952V40.0823H28.4044V34.8952C28.4044 33.9388 27.6317 33.1661 26.6754 33.1661H24.9463C23.039 33.1661 21.4883 34.7169 21.4883 36.6242C21.4883 37.8994 22.1907 39.0016 23.2173 39.6014V46.1339C23.2173 46.6094 23.6063 46.9984 24.0818 46.9984H27.5399C28.0154 46.9984 28.4044 46.6094 28.4044 46.1339V45.2694H49.1528V46.1339C49.1528 46.6094 49.5418 46.9984 50.0173 46.9984H53.4754C53.9509 46.9984 54.3399 46.6094 54.3399 46.1339V39.6014C55.3665 39.0016 56.0689 37.8994 56.0689 36.6242C56.0689 34.7169 54.5182 33.1661 52.6109 33.1661Z"/></symbol>
 <symbol id="v-snack" viewBox="19.06 20.95 37.51 29.82" fill="currentColor" stroke="none"><path d="M39.3768 31.3532V29.5521C39.3768 29.3133 39.2819 29.0842 39.113 28.9153C38.9441 28.7464 38.7151 28.6516 38.4762 28.6516H31.201L32.3267 24.1489H34.8741C35.1129 24.1489 35.342 24.054 35.5108 23.8851C35.6797 23.7162 35.7746 23.4872 35.7746 23.2483V22.3478C35.7746 22.109 35.6797 21.8799 35.5108 21.711C35.342 21.5421 35.1129 21.4473 34.8741 21.4473H31.9755C31.4733 21.4472 30.9856 21.615 30.5898 21.924C30.194 22.2331 29.9129 22.6655 29.7911 23.1527L28.4161 28.6516H20.4655C20.2266 28.6516 19.9976 28.7464 19.8287 28.9153C19.6598 29.0842 19.5649 29.3133 19.5649 29.5521V31.3532C19.5649 31.592 19.6598 31.8211 19.8287 31.9899C19.9976 32.1588 20.2266 32.2537 20.4655 32.2537H38.4762C38.7151 32.2537 38.9441 32.1588 39.113 31.9899C39.2819 31.8211 39.3768 31.592 39.3768 31.3532ZM34.3985 39.3578C34.0875 38.7713 33.9427 38.1109 33.9798 37.4481C34.0169 36.7852 34.2345 36.1451 34.609 35.597C34.9872 35.0414 35.4572 34.5354 35.9648 34.0548H21.7189L23.1699 48.5923C23.2009 49.0474 23.4041 49.4735 23.7382 49.7842C24.0722 50.0948 24.512 50.2665 24.9682 50.2645H33.9735C34.2406 50.2599 34.5032 50.1953 34.7418 50.0753C34.2402 49.3335 33.9726 48.4583 33.9735 47.5628C33.9736 47.1705 34.0592 46.7828 34.2245 46.4269C34.3897 46.0711 34.6306 45.7555 34.9304 45.5023C34.605 45.1506 34.3532 44.7374 34.1898 44.287C34.0263 43.8366 33.9545 43.3581 33.9785 42.8796C34.0025 42.401 34.1219 41.9321 34.3296 41.5004C34.5373 41.0686 34.8292 40.6827 35.1881 40.3653C34.8669 40.0793 34.5994 39.7381 34.3985 39.3578ZM54.6859 46.6623H36.6751C36.4363 46.6623 36.2073 46.7572 36.0384 46.9261C35.8695 47.0949 35.7746 47.324 35.7746 47.5628C35.7746 48.2794 36.0592 48.9665 36.5659 49.4732C37.0725 49.9798 37.7597 50.2645 38.4762 50.2645H52.8848C53.6013 50.2645 54.2885 49.9798 54.7951 49.4732C55.3018 48.9665 55.5864 48.2794 55.5864 47.5628C55.5864 47.324 55.4915 47.0949 55.3227 46.9261C55.1538 46.7572 54.9247 46.6623 54.6859 46.6623ZM53.7854 41.2591H37.5757C37.098 41.2591 36.6399 41.4488 36.3021 41.7866C35.9644 42.1244 35.7746 42.5825 35.7746 43.0602C35.7746 43.5378 35.9644 43.9959 36.3021 44.3337C36.6399 44.6715 37.098 44.8612 37.5757 44.8612H53.7854C54.263 44.8612 54.7211 44.6715 55.0589 44.3337C55.3967 43.9959 55.5864 43.5378 55.5864 43.0602C55.5864 42.5825 55.3967 42.1244 55.0589 41.7866C54.7211 41.4488 54.263 41.2591 53.7854 41.2591ZM36.0977 36.6106C35.2799 37.8106 36.1084 39.458 37.5352 39.458H53.8264C55.2532 39.458 56.0778 37.8106 55.2634 36.6106C53.6052 34.1747 49.9547 32.2576 45.6805 32.2537C41.4063 32.2498 37.7564 34.1747 36.0977 36.6106ZM50.1832 34.9553C50.3613 34.9553 50.5354 35.0081 50.6835 35.1071C50.8316 35.206 50.947 35.3467 51.0152 35.5112C51.0833 35.6758 51.1012 35.8569 51.0664 36.0315C51.0317 36.2062 50.9459 36.3667 50.82 36.4926C50.694 36.6186 50.5336 36.7043 50.3589 36.7391C50.1842 36.7738 50.0031 36.756 49.8386 36.6878C49.674 36.6197 49.5334 36.5043 49.4344 36.3562C49.3355 36.2081 49.2827 36.034 49.2827 35.8559C49.2827 35.617 49.3775 35.388 49.5464 35.2191C49.7153 35.0502 49.9444 34.9553 50.1832 34.9553ZM45.6805 34.0548C45.8586 34.0548 46.0327 34.1076 46.1808 34.2066C46.3289 34.3055 46.4443 34.4461 46.5125 34.6107C46.5807 34.7753 46.5985 34.9563 46.5637 35.131C46.529 35.3057 46.4432 35.4662 46.3173 35.5921C46.1914 35.718 46.0309 35.8038 45.8562 35.8386C45.6815 35.8733 45.5004 35.8555 45.3359 35.7873C45.1713 35.7191 45.0307 35.6037 44.9317 35.4556C44.8328 35.3075 44.78 35.1334 44.78 34.9553C44.78 34.7165 44.8749 34.4874 45.0437 34.3185C45.2126 34.1497 45.4417 34.0548 45.6805 34.0548ZM41.1778 34.9553C41.3559 34.9553 41.53 35.0081 41.6781 35.1071C41.8262 35.206 41.9417 35.3467 42.0098 35.5112C42.078 35.6758 42.0958 35.8569 42.0611 36.0315C42.0263 36.2062 41.9406 36.3667 41.8146 36.4926C41.6887 36.6186 41.5282 36.7043 41.3535 36.7391C41.1788 36.7738 40.9978 36.756 40.8332 36.6878C40.6687 36.6197 40.528 36.5043 40.4291 36.3562C40.3301 36.2081 40.2773 36.034 40.2773 35.8559C40.2773 35.617 40.3722 35.388 40.5411 35.2191C40.7099 35.0502 40.939 34.9553 41.1778 34.9553Z"/></symbol>
 <symbol id="v-ticket" viewBox="20.99 24.79 35.58 24.05" fill="currentColor" stroke="none"><path d="M29.1709 31.0545H48.3824V42.5813H29.1709V31.0545ZM53.1853 36.8179C53.1853 38.4094 54.4754 39.6996 56.067 39.6996V45.4631C56.067 47.0546 54.7768 48.3448 53.1853 48.3448H24.368C22.7765 48.3448 21.4863 47.0546 21.4863 45.4631V39.6996C23.0779 39.6996 24.368 38.4094 24.368 36.8179C24.368 35.2263 23.0779 33.9362 21.4863 33.9362V28.1727C21.4863 26.5812 22.7765 25.291 24.368 25.291H53.1853C54.7768 25.291 56.067 26.5812 56.067 28.1727V33.9362C54.4754 33.9362 53.1853 35.2263 53.1853 36.8179ZM50.3035 30.5742C50.3035 29.7784 49.6584 29.1333 48.8627 29.1333H28.6906C27.8949 29.1333 27.2498 29.7784 27.2498 30.5742V43.0616C27.2498 43.8574 27.8949 44.5025 28.6906 44.5025H48.8627C49.6584 44.5025 50.3035 43.8574 50.3035 43.0616V30.5742Z"/></symbol>
+<symbol id="v-athletic" viewBox="23.41 21.44 30.74 30.75" fill="currentColor" stroke="none"><path d="M36.5669 21.5898C33.8525 21.9802 31.2249 23.0833 28.9939 24.9239L33.7905 29.7206C35.5134 27.502 36.474 24.6884 36.5669 21.5898V21.5898ZM38.7793 34.7094L48.5648 24.9239C45.9372 22.7549 42.7642 21.6084 39.5478 21.4473C39.4734 25.4073 38.2154 29.0265 35.91 31.8401L38.7793 34.7094ZM26.8868 27.031C25.0462 29.262 23.9431 31.8896 23.5527 34.604C26.6513 34.5111 29.4711 33.5505 31.6835 31.8277L26.8868 27.031ZM43.7557 39.6858C46.5631 37.3866 50.1823 36.1285 54.1485 36.048C53.9874 32.8316 52.8409 29.6586 50.6719 27.031L40.8864 36.8164L43.7557 39.6858V39.6858ZM38.7793 38.9235L28.9939 48.709C31.6215 50.8718 34.7945 52.0245 38.0109 52.1856C38.0914 48.2194 39.3495 44.6002 41.6487 41.7928L38.7793 38.9235ZM50.6719 46.6019C52.5124 44.3709 53.6155 41.7433 54.006 39.0289C50.9011 39.128 48.0876 40.0886 45.8752 41.8052L50.6719 46.6019ZM33.8029 33.9471C30.9894 36.2525 27.3702 37.5167 23.4102 37.5849C23.5713 40.8013 24.7178 43.9743 26.8868 46.6019L36.6723 36.8164L33.8029 33.9471ZM40.9918 52.0431C43.7061 51.6527 46.3338 50.5495 48.5648 48.709L43.7681 43.9123C42.0515 46.1247 41.0909 48.9445 40.9918 52.0431Z"/></symbol>
+<symbol id="v-custom" viewBox="23.41 22.41 29.78 29.78" fill="currentColor" stroke="none"><path d="M53.187 37.2971C53.187 45.5218 46.5204 52.186 38.2981 52.186C30.0757 52.186 23.4092 45.5218 23.4092 37.2971C23.4092 29.0772 30.0757 22.4082 38.2981 22.4082C46.5204 22.4082 53.187 29.0772 53.187 37.2971ZM38.6976 27.3311C35.4258 27.3311 33.3391 28.7094 31.7005 31.1589C31.4882 31.4763 31.5592 31.9043 31.8635 32.135L33.9467 33.7145C34.2592 33.9515 34.7044 33.8951 34.9472 33.5871C36.0196 32.2268 36.755 31.438 38.3874 31.438C39.6139 31.438 41.1309 32.2274 41.1309 33.4167C41.1309 34.3158 40.3887 34.7775 39.1777 35.4565C37.7654 36.2481 35.8966 37.2335 35.8966 39.6985V39.9387C35.8966 40.3365 36.2192 40.6591 36.6171 40.6591H39.9791C40.3769 40.6591 40.6995 40.3365 40.6995 39.9387V39.8586C40.6995 38.1499 45.6936 38.0788 45.6936 33.4548C45.6936 29.9726 42.0816 27.3311 38.6976 27.3311ZM38.2981 42.22C36.7753 42.22 35.5364 43.4589 35.5364 44.9817C35.5364 46.5044 36.7753 47.7433 38.2981 47.7433C39.8209 47.7433 41.0597 46.5044 41.0597 44.9817C41.0597 43.4589 39.8209 42.22 38.2981 42.22Z"/></symbol>
 </defs></svg>
 
 <div id="shell">
@@ -1734,6 +1736,17 @@ function appendLocalMessage(id, text, imageUrl){
   STORE.notify();
 }
 
+/* Offline feed entry — live mode writes the activity doc instead and the
+   stream brings it back. Newest first, matching the desc order. */
+function appendLocalActivity(id, icon, text, isCheck){
+  var ev = STORE.byId[id]; if(!ev || !ev.activity) return;
+  var m = loadMe();
+  ev.activity.unshift({ personName: m.name || 'Guest', personAvatarUrl: meAvatar(),
+    icon: icon, isCheck: !!isCheck, text: text, whenLabel: '',
+    at: new Date().toISOString(), quote: /^[“"]/.test(text) });
+  STORE.notify();
+}
+
 function useLocalData(reason){
   STORE.error = reason || null;
   STORE.setEvents(SEED_EVENTS.map(seedToModel), "local");
@@ -2072,12 +2085,19 @@ function renderEvent(id){
     : '<div class="chat-card"><div class="chat-txt"><p>No messages yet.</p></div>'+
       '<a class="ghost" href="#chat/'+ev.id+'" data-nav>'+ico('chat')+'Start chat</a></div>';
 
-  var feedBlock = ev.activity
-    ? '<ul class="feed">'+ev.activity.map(function(a){
-        return '<li>'+img(a.personAvatarUrl,'')+ico(a.icon,a.isCheck?'ok':'')+
-          '<p><b>'+h(fname(a.personName))+(a.quote?':':'')+'</b> '+h(a.text)+
-          '</p><time>'+h(a.whenLabel)+'</time></li>'; }).join('')+'</ul>'+
-      '<p class="caught">You\u2019re all caught up!</p>'
+  var acts=ev.activity, actsOpen=!!ACT_OPEN[ev.id];
+  var feedBlock = acts
+    ? (acts.length
+        ? '<ul class="feed">'+(actsOpen?acts:acts.slice(0,5)).map(function(a){
+            return '<li>'+img(a.personAvatarUrl,'')+ico(a.icon,a.isCheck?'ok':'')+
+              '<p><b>'+h(fname(a.personName))+(a.quote?':':'')+'</b> '+h(a.text)+
+              '</p><time>'+h(a.at?ago(a.at):a.whenLabel)+'</time></li>'; }).join('')+'</ul>'+
+          (acts.length>5
+            ? '<button class="view-all" type="button" data-actmore="'+ev.id+'">'+
+                (actsOpen?'Show less':'View all ('+acts.length+')')+'</button>'
+            : '')+
+          (actsOpen || acts.length<=5 ? '<p class="caught">You\u2019re all caught up!</p>' : '')
+        : '<p class="skel">Nothing yet \u2014 RSVPs, photos and chat show up here.</p>')
     : skel('Loading activity\u2026');
 
   return '<div class="wrap">'+
@@ -2168,7 +2188,7 @@ function renderEvent(id){
 }
 
 /* ================= GUESTS ================= */
-var guestsOpen = {};
+var guestsOpen = {}, ACT_OPEN = {};
 
 /* The four lists a guests page shows. Names are the join key: when someone
    claims a curated invite and answers, their own row replaces the host-typed
@@ -2451,7 +2471,9 @@ var VIBES = [
   { k:'Go-Out', ic:'v-goout',  bg:'#FED7AA', fg:'#FB923C' },
   { k:'Food',   ic:'v-snack',  bg:'#A7F3D0', fg:'#10B981' },
   { k:'Study',  ic:'v-study',  bg:'#C7D2FE', fg:'#6366F1' },
-  { k:'Event',  ic:'v-ticket', bg:'#C7D2FE', fg:'#6366F1' }
+  { k:'Event',  ic:'v-ticket', bg:'#C7D2FE', fg:'#6366F1' },
+  { k:'Athletic', ic:'v-athletic', bg:'#FED7AA', fg:'#FB923C' },
+  { k:'Custom',   ic:'v-custom',   bg:'#FECDD3', fg:'#FB7185' }
 ];
 /* iconN.svg (grey #E5E7EB / #9CA3AF) is the unselected tile, iconN-bg.svg the
    selected one — same geometry, so one symbol plus these colours covers both. */
@@ -3599,7 +3621,8 @@ function createLocalEvent(d){
   ev.maybes = []; ev.cants = [];
   ev.photos = [];
   ev.activity = [{ personName: me.name, personAvatarUrl: me.av, icon: 'check',
-                   isCheck: true, text: 'created this event', whenLabel: 'Just now', quote: false }];
+                   isCheck: true, text: 'created this event', whenLabel: '',
+                   at: new Date().toISOString(), quote: false }];
   STORE.setEvents(STORE.events.concat([ev]));
   return id;
 }
@@ -4148,6 +4171,8 @@ function eventDock(id){
       pm.plus[pid]=pn; saveMe();
       if(STORE.mode==='live' && window.D2C && D2C.setPlus)
         D2C.setPlus(pid, pn).catch(function(){});
+      else appendLocalActivity(pid, 'user-plus',
+        pn>0?'is bringing +'+pn:'isn’t bringing anyone now');
       var ps=document.getElementById('plus-slot');
       if(ps && pev) ps.innerHTML=plusRowInner(pev);
       return;
@@ -4198,6 +4223,13 @@ function eventDock(id){
       guestsOpen[gsec.dataset.gsec]=!guestsOpen[gsec.dataset.gsec];
       var r14=route();
       if(r14.v==='guests') app.innerHTML=renderGuests(r14.id);
+      return;
+    }
+    var am=t.closest('[data-actmore]');
+    if(am){
+      ACT_OPEN[am.dataset.actmore]=!ACT_OPEN[am.dataset.actmore];
+      var ra=route();
+      if(ra.v==='event') app.innerHTML=renderEvent(ra.id);
       return;
     }
 
@@ -4662,6 +4694,8 @@ function eventDock(id){
                  status:'pending', uid:'', source:'invite', plus:0 };
       }));
       ev.counts.pending=(ev.counts.pending||0)+list.length;
+      appendLocalActivity(id, 'users',
+        list.length===1?'invited '+list[0].name:'invited '+list.length+' friends');
       STORE.notify();
       toast(list.length===1?'Invite added':list.length+' invites added');
     }
@@ -4833,6 +4867,8 @@ function eventDock(id){
       D2C.sendMessage(id, text).catch(function(e){ toast(e.message||'Could not send','err'); });
     } else {
       appendLocalMessage(id, text);
+      appendLocalActivity(id, 'chat',
+        '“'+(text.length>80?text.slice(0,80)+'…':text)+'”');
     }
     scrollThread();
   }
@@ -4850,6 +4886,7 @@ function eventDock(id){
           .catch(function(e){ toast(e.message||'Could not send photo','err'); });
       } else {
         appendLocalMessage(id, '', URL.createObjectURL(file));
+        appendLocalActivity(id, 'cam', 'sent a photo in the chat');
         scrollThread();
       }
     };
@@ -4946,6 +4983,8 @@ function eventDock(id){
         toast((e&&e.message)||'Could not save your RSVP','err',4500);
       });
     } else {
+      appendLocalActivity(id, k==='going'?'check':k==='maybe'?'help':'x',
+        k==='going'?'is Going':k==='maybe'?'might come':'can\u2019t make it', k==='going');
       toast(k==='going'?'You\u2019re going!':k==='maybe'?'Marked as maybe':'Marked as can\u2019t go');
     }
   }
@@ -5015,6 +5054,7 @@ function eventDock(id){
       var ev=STORE.byId[id];
       if(!ev) return fail(new Error('That event is no longer here'));
       for(var k in patch) ev[k]=patch[k];
+      appendLocalActivity(id, 'pen', 'updated the event details');
       done();
     }
   }
@@ -5361,7 +5401,9 @@ async function seed(){
       const a = ev.activity[i];
       await put(doc(collection(evRef, "activity")), {
         eventUid: ev.fsId, personUid: PERSON[a.id].fsId, personName: pn(a.id),
-        icon: a.ic, isCheck: !!a.ok, text: a.txt, whenLabel: a.t, order: i, source: "seed"
+        icon: a.ic, isCheck: !!a.ok, text: a.txt, whenLabel: a.t,
+        /* descending like photos — authored order is newest first */
+        order: ev.activity.length - i, source: "seed"
       });
     }
   }
@@ -5408,6 +5450,7 @@ async function uploadPhoto(evId, file, say){
     order: Date.now(), source: "upload", uploadedAt: fs.serverTimestamp()
   });
   await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", evId), { photoCount: fs.increment(1) });
+  logActivity(evId, "cam", "added a photo");
   return { url, path, id: photoRef.id };
 }
 
@@ -5582,6 +5625,7 @@ async function createEvent(draft){
   await fs.setDoc(fs.doc(fs.collection(evRef, "activity")), {
     personName: me.name, personAvatarUrl: me.av, icon: "check", isCheck: true,
     text: "created this event", whenLabel: "Just now",
+    at: new Date().toISOString(),
     order: Date.now(), source: "created"
   });
   ok("event created: " + FS_ROOT.join("/") + "/events/" + evRef.id +
@@ -5594,6 +5638,7 @@ async function updateEvent(id, patch){
   const { db, fs } = await initFirebase();
   patch = Object.assign({}, patch, { updatedAt: fs.serverTimestamp() });
   await fs.updateDoc(fs.doc(db, ...FS_ROOT, "events", id), patch);
+  logActivity(id, "pen", "updated the event details");
   ok("event updated: " + FS_ROOT.join("/") + "/events/" + id);
 }
 
@@ -5649,7 +5694,28 @@ async function setPlus(eventId, n){
                            invitedLabel: "Hosting", order: Date.now(), source: "plus" });
   await fs.setDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", me.fsId || "anon"),
     patch, { merge: true });
+  logActivity(eventId, "user-plus", n > 0 ? "is bringing +" + n : "isn’t bringing anyone now");
 }
+
+/* ---------------- the activity feed ----------------
+   Best-effort: one doc per thing that happens, streamed back newest-first.
+   Never awaited by callers and never allowed to fail an action. */
+async function logActivity(eventId, icon, text, isCheck){
+  try {
+    const { db, fs } = await initFirebase();
+    const me = meIdent();
+    await fs.setDoc(fs.doc(fs.collection(db, ...FS_ROOT, "events", eventId, "activity")), {
+      eventUid: eventId, personUid: me.fsId || "", personName: me.name || "Guest",
+      personAvatarUrl: me.av, icon: icon, isCheck: !!isCheck, text: text,
+      whenLabel: "", at: new Date().toISOString(), order: Date.now(), source: "app"
+    });
+  } catch(e){ console.warn("activity not logged:", e && e.message); }
+}
+const RSVP_ACT = {
+  going: ["check", "is Going", true],
+  maybe: ["help",  "might come", false],
+  cant:  ["x",     "can’t make it", false]
+};
 
 /* ---------------- any member invites more people ----------------
    Each name becomes a pending guest doc with no visitor uid — exactly the
@@ -5664,6 +5730,8 @@ async function inviteGuests(eventId, list){
       order: Date.now() + i, source: "invite"
     })));
   await fs.updateDoc(evRef, { "counts.pending": fs.increment(list.length) });
+  logActivity(eventId, "users",
+    list.length === 1 ? "invited " + list[0].name : "invited " + list.length + " friends");
   ok(list.length + " invite(s) written to " + FS_ROOT.join("/") + "/events/" + eventId + "/guests");
 }
 
@@ -5676,6 +5744,7 @@ async function announceGuest(eventId){
     invitedLabel: "Viewing this event", isHost: false, isYou: false,
     status: "pending", order: Date.now(), source: "visit"
   }, { merge: true });
+  logActivity(eventId, "person", "joined the guest list");
 }
 
 /* ---------------- profile propagation ---------------- */
@@ -5709,6 +5778,8 @@ async function setRsvp(eventId, status, prev){
   inc["counts." + status] = fs.increment(1);
   if(prev && prev !== status) inc["counts." + prev] = fs.increment(-1);
   await fs.updateDoc(evRef, inc);
+  const act = RSVP_ACT[status];
+  if(act) logActivity(eventId, act[0], act[1], act[2]);
 }
 
 /* ---------------- 6. visitor profiles ---------------- */
@@ -5778,12 +5849,18 @@ async function watchDetail(id){
                byAvatarUrl: p.byAvatarUrl || "", whenLabel: p.whenLabel || "" };
     })}), e => err("photos: " + e.code)));
 
-  unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "activity"), fs.orderBy("order")),
+  /* order desc: seeds count down from the list length, app entries use
+     Date.now(), so the newest is always first \u2014 same scheme as photos. */
+  unsubDetail.push(fs.onSnapshot(fs.query(fs.collection(...base, "activity"), fs.orderBy("order", "desc")),
     snap => STORE.setDetail(id, { activity: snap.docs.map(d => {
       const a = d.data();
       return { personName: a.personName || "Someone", personAvatarUrl: a.personAvatarUrl || "",
                icon: a.icon || "check", isCheck: !!a.isCheck, text: a.text || "",
-               whenLabel: a.whenLabel || "", quote: /^[\u201C"]/.test(a.text || "") };
+               whenLabel: a.whenLabel || "",
+               /* docs from before `at` existed still carry their ms epoch in
+                  order \u2014 derive the time instead of a frozen "Just now" */
+               at: a.at || (a.order > 1e12 ? new Date(a.order).toISOString() : ""),
+               quote: /^[\u201C"]/.test(a.text || "") };
     })}), e => err("activity: " + e.code)));
 }
 
@@ -5805,6 +5882,7 @@ async function sendMessage(eventId, text){
       text: text, at: new Date().toISOString(), isYou: true
     })
   });
+  logActivity(eventId, "chat", "“" + (text.length > 80 ? text.slice(0, 80) + "…" : text) + "”");
 }
 
 /* A picture message. The file lives under its own storage prefix (CHAT_ROOT),
@@ -5832,6 +5910,7 @@ async function sendImage(eventId, file){
       at: new Date().toISOString(), isYou: true
     })
   });
+  logActivity(eventId, "cam", "sent a photo in the chat");
   return { url, path };
 }
 
