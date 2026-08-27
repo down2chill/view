@@ -1191,6 +1191,35 @@ var GAV = 'data:image/svg+xml,'+encodeURIComponent(
   '<circle cx="70" cy="53" r="23" fill="none" stroke="#9ca3af" stroke-width="9"/>'+
   '<path d="M26 121a44 44 0 0 1 88 0" fill="none" stroke="#9ca3af" stroke-width="9" stroke-linecap="round"/>'+
   '</svg>');
+/* default event cover — night-sky scene in the app palette, used at render
+   time wherever a created event has no photo (the model keeps coverUrl "") */
+var DEF_COVER = 'data:image/svg+xml,'+encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 600">'+
+  '<defs><linearGradient id="s" x1="0" y1="0" x2="0" y2="1">'+
+  '<stop offset="0" stop-color="#7d8ffb"/><stop offset=".45" stop-color="#a9b6fc"/>'+
+  '<stop offset=".78" stop-color="#d7ddfd"/><stop offset="1" stop-color="#eef0fc"/></linearGradient>'+
+  '<radialGradient id="g"><stop offset="0" stop-color="#fffdf0" stop-opacity=".85"/>'+
+  '<stop offset="1" stop-color="#fffdf0" stop-opacity="0"/></radialGradient></defs>'+
+  '<rect width="480" height="600" fill="url(#s)"/>'+
+  '<g fill="#fff"><circle cx="60" cy="150" r="2.4"/><circle cx="150" cy="70" r="1.8"/>'+
+  '<circle cx="205" cy="180" r="2.2" opacity=".8"/><circle cx="280" cy="60" r="1.7"/>'+
+  '<circle cx="255" cy="130" r="1.5" opacity=".7"/><circle cx="430" cy="230" r="2"/>'+
+  '<circle cx="90" cy="260" r="1.8" opacity=".7"/><circle cx="330" cy="250" r="1.6" opacity=".8"/>'+
+  '<circle cx="450" cy="60" r="1.6" opacity=".6"/><circle cx="35" cy="60" r="1.7" opacity=".8"/></g>'+
+  '<circle cx="368" cy="128" r="62" fill="url(#g)"/><circle cx="368" cy="128" r="33" fill="#fdfbf3"/>'+
+  '<circle cx="355" cy="119" r="6" fill="#e9e5d5" opacity=".55"/>'+
+  '<circle cx="379" cy="138" r="4" fill="#e9e5d5" opacity=".4"/>'+
+  '<path d="M-6 84 Q120 128 240 96 Q360 68 486 108" fill="none" stroke="#fff" stroke-opacity=".75" stroke-width="3"/>'+
+  '<path d="M52 102 l9 22 9-19Z" fill="#ffd479"/><path d="M128 116 l9 22 9-20Z" fill="#fca5b8"/>'+
+  '<path d="M206 102 l9 22 9-21Z" fill="#8ce3b0"/><path d="M282 84 l9 22 9-20Z" fill="#bfdbfe"/>'+
+  '<path d="M368 84 l9 22 9-19Z" fill="#ffd479"/>'+
+  '<path d="M0 428 Q130 344 264 406 Q380 456 480 388 V600 H0 Z" fill="#b6c0fc"/>'+
+  '<path d="M0 478 Q160 406 322 466 Q420 500 480 448 V600 H0 Z" fill="#93a2fa"/>'+
+  '<path d="M226 388 v-24 l28 8 -28 8" fill="#f7b733"/>'+
+  '<path d="M226 388 l36 62 h-72 Z" fill="#4038f0"/>'+
+  '<path d="M226 388 l12 62 h-24 Z" fill="#dfe3ff"/>'+
+  '<path d="M0 528 Q150 474 306 520 Q410 550 480 508 V600 H0 Z" fill="#7683f2"/>'+
+  '</svg>');
 
 /* Local records use a short authored id. Firestore assigns the real document id
    at seed time and it is written back onto each record as .fsId               */
@@ -1226,7 +1255,7 @@ var SEED_EVENTS = [
     id:"pool-party", fsId:null, title:'Pool Party', date:'2021-07-31', time:'4:00 PM',
     venue:'Casa Ramos', address:'123 Palm Way, Redding, CA 96001',
     hostId:"emily", role:'hosting', dot:VIOLET, img:'poolparty7', map:'palmwaymap',
-    going:18, maybe:4, cant:2, pending:7,
+    going:9, maybe:2, cant:1, pending:4,
     about:'Relax by the pool, bring a swimsuit, and come hungry. Bring sunscreen, a towel, and anything you\u2019d like to drink. Floating flamingos are encouraged.',
     vibe:'Chill', capacity:'30 guests', entry:'$10 at the door', invite:'Invite only',
     chat:{ fromId:"emily", msg:'Bring towels! I\u2019ll have extras.', time:'2 min ago', unread:3 },
@@ -1292,7 +1321,7 @@ var SEED_EVENTS = [
     id:"rooftop-movie", fsId:null, title:'Rooftop Movie Night', date:'2021-08-14', time:'8:00 PM',
     venue:'Skyline Rooftop', address:'88 Summit St, Redding, CA 96001',
     hostId:"jillian", role:'invited', dot:VIOLET, img:'rooftopmovie', map:'summitmap',
-    going:15, maybe:6, cant:2, pending:9,
+    going:8, maybe:3, cant:1, pending:4,
     about:'Projector goes up at sundown. We\u2019re screening something loud and ridiculous. Beanbags provided, blankets are not \u2014 it gets cold up there.',
     vibe:'Party', capacity:'40 guests', entry:'$5 suggested', invite:'Invite only',
     chat:{ fromId:"jillian", msg:'Vote for the movie in the thread!', time:'1 hour ago', unread:5 },
@@ -1371,6 +1400,24 @@ function hydrate(ev){
       return {id:p,when:'Invited '+(i+1)+' day'+(i?'s':'')+' ago by '+pf(ev.hostId)};
     });
   }
+  /* grow the response lists toward the authored counts, then clamp the
+     counts to the rows — every page tells the same story */
+  var used={};
+  ev.guests.forEach(function(g){ used[g.id]=1; });
+  ev.waiting.forEach(function(g){ used[g.id]=1; });
+  var free=others.filter(function(p){ return !used[p]; }),
+      fills=['Sounds fun!','I’m in.','Wouldn’t miss it.','Ready when you are.'],
+      grow=Math.max(0,(ev.going||0)-ev.guests.length), gi;
+  for(gi=0; gi<grow && free.length; gi++)
+    ev.guests.push({ id:free.shift(), msg:fills[gi%fills.length],
+                     when:'Invited by '+pf(ev.hostId) });
+  ev.maybesL=[]; ev.cantsL=[];
+  for(gi=0; gi<(ev.maybe||0) && free.length; gi++)
+    ev.maybesL.push({ id:free.shift(), when:'Responded maybe' });
+  for(gi=0; gi<(ev.cant||0) && free.length; gi++)
+    ev.cantsL.push({ id:free.shift(), when:'Can’t make it' });
+  ev.going=ev.guests.length;  ev.maybe=ev.maybesL.length;
+  ev.cant=ev.cantsL.length;   ev.pending=ev.waiting.length;
   if(!ev.photos){ ev.photos=[ev.img+'a',ev.img+'b',ev.img+'c',ev.img+'d']; }
   if(ev.photoCount==null){ ev.photoCount=ev.photos.length; ev.photoWhen=dp.monShort+' '+dp.day; }
   ev.allPhotos=[];
@@ -1712,7 +1759,12 @@ function seedDetail(ev){
     waiting: s.waiting.map(function(g){
       return { name: pn(g.id), avatarUrl: pav(g.id), message: "",
                invitedLabel: g.when, isHost: false, isYou: false, status: "pending" }; }),
-    maybes: [], cants: [],
+    maybes: (s.maybesL||[]).map(function(g){
+      return { name: pn(g.id), avatarUrl: pav(g.id), message: "",
+               invitedLabel: g.when, isHost: false, isYou: false, status: "maybe" }; }),
+    cants: (s.cantsL||[]).map(function(g){
+      return { name: pn(g.id), avatarUrl: pav(g.id), message: "",
+               invitedLabel: g.when, isHost: false, isYou: false, status: "cant" }; }),
     photos: s.allPhotos.map(function(p){
       return { url: IMG(p.seed, 1400, 1400), thumbUrl: IMG(p.seed, 600, 600),
                byName: pn(p.byId), byAvatarUrl: pav(p.byId), whenLabel: p.when }; }),
@@ -1862,7 +1914,7 @@ function statusPill(ev){
 function eventCard(ev){
   var dp=dparts(ev.dateISO);
   return '<a class="ecard" href="#event/'+ev.id+'" data-nav>'+
-    img(ev.thumbUrl, ev.title, 'thumb')+
+    img(ev.thumbUrl||DEF_COVER, ev.title, 'thumb')+
     '<span class="emore" data-evmenu="'+ev.id+'" role="button" tabindex="0" aria-haspopup="true" '+
       'aria-expanded="false" aria-label="Options for '+h(ev.title)+'">'+ico('more')+'</span>'+
     '<div class="ebody">'+
@@ -2016,7 +2068,7 @@ function calBody(){
     var stack=ev.guestPreview.slice(0,3).map(function(g){ return img(g.avatarUrl,''); }).join('');
     var extra=Math.max(0, ev.counts.going-3);
     return '<a class="drow" href="#event/'+ev.id+'" data-nav>'+
-      img(ev.thumbUrl,'')+
+      img(ev.thumbUrl||DEF_COVER,'')+
       '<div class="dinfo">'+
         '<div class="dtime"><i style="background:'+ev.dot+'"></i>'+h(ev.time)+'</div>'+
         '<h4>'+h(ev.title)+'</h4>'+
@@ -2137,7 +2189,7 @@ function renderEvent(id){
     '</header>'+
     '<h1 class="title">'+h(ev.title)+'</h1>'+
     '<div class="grid"><div class="colA">'+
-      img(ev.coverUrl, ev.title, 'hero')+
+      img(ev.coverUrl||DEF_COVER, ev.title, 'hero')+
       '<div class="meta">'+
         '<div class="host">'+img(ev.hostAvatarUrl,'')+
           '<p>Hosted by <b>'+h(fname(ev.hostName))+'</b></p>'+
@@ -2996,7 +3048,7 @@ function step3Body(){
     '<div class="full">' + cardReminders(d) + '</div>';
 }
 function renderCreate3(){
-  return '<div class="wrap">' + (EDIT ? editHead() : createHead(3)) +
+  return '<div class="wrap">' + createHead(3) +
     '<div class="cgrid c3">' + step3Body() + '</div></div>';
 }
 
@@ -3488,8 +3540,12 @@ function numOf(s, dflt){
    these fields, so every one of them falls back to something sensible. */
 function eventToDraft(ev){
   var d = blankDraft();
-  d.title = ev.title; d.date = ev.dateISO; d.time = ev.time;
+  /* "4:00 PM – 6:00 PM" splits back into start + end */
+  var tp = String(ev.time || '').split(' – ');
+  d.title = ev.title; d.date = ev.dateISO;
+  d.time = tp[0] || ''; d.endTime = tp[1] || null;
   d.venue = ev.venue; d.address = ev.address; d.about = ev.about;
+  d.coverUrl = ev.coverUrl || ''; d.coverPath = ev.coverPath || '';
   d.vibes = (ev.vibes && ev.vibes.length) ? ev.vibes.slice() : [];
   d.capMode  = ev.capacityMode || (/unlimited|no limit/i.test(ev.capacity || '') ? 'unlimited' : 'custom');
   d.capacity = ev.capacityMax || numOf(ev.capacity, 30);
@@ -3509,11 +3565,40 @@ function eventToDraft(ev){
 }
 function startEdit(id){
   var ev = findEvent(id);
-  if(!ev) return false;
-  EDIT = { id: ev.id, draft: eventToDraft(ev) };
+  if(!ev || ev.role !== 'hosting') return false;
+  /* orig + dropPaths let Save/Cancel settle which cover files survive */
+  EDIT = { id: ev.id, draft: eventToDraft(ev),
+           orig: { coverPath: ev.coverPath || '' }, dropPaths: [] };
   return true;
 }
 function endEdit(){ EDIT = null; }
+/* Storage bookkeeping when an edit closes: on save, replaced covers go; on
+   cancel, the abandoned new upload goes and the original stays. */
+function editCleanup(saved){
+  if(!EDIT || !(window.D2C && D2C.deleteFile)) return;
+  var d = EDIT.draft, orig = EDIT.orig.coverPath, del = [];
+  (EDIT.dropPaths || []).forEach(function(p){
+    if(saved ? p !== d.coverPath : p !== orig) del.push(p);
+  });
+  if(!saved && d.coverPath && d.coverPath !== orig) del.push(d.coverPath);
+  del.forEach(function(p){ D2C.deleteFile(p); });
+}
+
+/* The basics the edit screen owns beyond step 3 — same field names the event
+   document already stores, so live updateDoc and the local merge both apply
+   it directly. */
+function basicsPatch(d){
+  var title = d.title.trim(),
+      cover = /^blob:/.test(d.coverUrl || '') ? '' : (d.coverUrl || ''),
+      p = { title: title, titleLower: title.toLowerCase(),
+            dateISO: d.date, time: d.endTime ? (d.time + ' – ' + d.endTime) : d.time,
+            timeSort: t24(d.time),
+            venue: d.venue.trim(), address: d.address.trim(), about: d.about.trim(),
+            vibe: d.vibes.length ? d.vibes.join(' · ') : 'Chill', vibes: d.vibes.slice(),
+            coverPath: d.coverPath || '', coverUrl: cover, thumbUrl: cover };
+  if(d.vibes.length) p.dot = vibeDot(d.vibes);   /* keep the old dot otherwise */
+  return p;
+}
 
 /* Just the part of the event document step 3 owns. draftDoc() folds this in
    so a created event and an edited one can never drift apart. */
@@ -3549,6 +3634,36 @@ function editFoot(){
       '<button class="ghost wide" type="button" data-editcancel>Cancel</button>' +
       '<button class="cta" type="button" id="c-cta" data-editsave>Save Changes' + ico('tick') + '</button>' +
     '</div></div>';
+}
+/* The full editor: the step-1/2 basics stacked above the step-3 cards. Every
+   control is the create screen's own (same ids and data hooks), all writing
+   into loadDraft() — which is EDIT.draft while an edit is open. */
+function renderEditPage(){
+  var d = loadDraft();
+  return '<div class="wrap">' + editHead() +
+    '<div class="cgrid">' +
+      '<div class="ccol">' +
+        '<section><h2 class="fld">Event Name</h2>' +
+          '<input class="inp" id="c-title" type="text" maxlength="80" data-d="title" aria-label="Event name" ' +
+            'placeholder="Pool Party" value="' + h(d.title) + '"></section>' +
+        '<section><h2 class="fld">Cover Photo</h2>' +
+          '<div id="cover-wrap">' + coverBox(d) + '</div></section>' +
+        '<section><h2 class="fld">About</h2>' +
+          '<div class="tawrap">' +
+            '<textarea class="inp" id="c-about" maxlength="500" data-d="about" aria-label="About this event" ' +
+              'placeholder="Tell guests what makes this event special.">' + h(d.about) + '</textarea>' +
+            '<span class="count" id="c-count">' + d.about.length + ' / 500</span>' +
+          '</div></section>' +
+      '</div>' +
+      '<div class="ccol">' +
+        '<section><h2 class="fld">When?</h2>' + whenBlock(d) + '</section>' +
+        '<section><h2 class="fld">Where?</h2>' + whereBlock(d) + '</section>' +
+        '<section><h2 class="fld">Vibe</h2>' +
+          '<p class="fsub">Pick as many as fit.</p>' + vibeGrid(d) + '</section>' +
+      '</div>' +
+    '</div>' +
+    '<div class="cgrid c3" style="margin-top:34px">' + step3Body() + '</div>' +
+  '</div>';
 }
 
 /* ---------- delete confirmation ---------- */
@@ -3609,7 +3724,8 @@ function takeCover(file){
   D2C.uploadCover(file, coverBusy).then(function(r){
     if(d._objUrl){ URL.revokeObjectURL(d._objUrl); d._objUrl = null; }
     d.coverUrl = r.url; d.coverPath = r.path;
-    if(oldPath && D2C.deleteFile) D2C.deleteFile(oldPath);   /* the replaced file */
+    /* replaced file: mid-edit it only dies if the edit is saved */
+    if(oldPath){ if(EDIT) EDIT.dropPaths.push(oldPath); else if(D2C.deleteFile) D2C.deleteFile(oldPath); }
     saveDraft(); repaintCover();
     toast('Cover photo uploaded');
   }).catch(function(e){
@@ -3619,7 +3735,10 @@ function takeCover(file){
 }
 function dropCover(d){
   if(d._objUrl){ URL.revokeObjectURL(d._objUrl); d._objUrl = null; }
-  if(d.coverPath && window.D2C && D2C.deleteFile) D2C.deleteFile(d.coverPath);
+  if(d.coverPath){
+    if(EDIT) EDIT.dropPaths.push(d.coverPath);          /* dies only on save */
+    else if(window.D2C && D2C.deleteFile) D2C.deleteFile(d.coverPath);
+  }
   d.coverUrl = ''; d.coverPath = '';
   saveDraft(); repaintCover();
 }
@@ -3707,8 +3826,8 @@ function isPublicEvent(ev){
          ev.inviteType === 'Public Link';
 }
 /* the host's curated list plus anyone added from the invite sheet later \u2014
-   the identities a visitor can claim */
-function claimList(ev){
+   the identities a visitor can claim, and the roster the invite gates check */
+function inviteePool(ev){
   var seen = {}, out = [];
   var push = function(g){
     var k = (g.name || '').toLowerCase();
@@ -3719,8 +3838,28 @@ function claimList(ev){
     : (ev.guestPreview || []).filter(function(g){ return !g.isHost; })).forEach(push);
   /* pending rows with no visitor uid are typed-in people, whoever added them */
   (ev.waiting || []).forEach(function(g){ if(!g.uid) push(g); });
-  return out.slice(0, 12);
+  return out;
 }
+function claimList(ev){ return inviteePool(ev).slice(0, 12); }
+
+/* ---- invite-type & visibility gates ----
+   amInvited: I already responded, or I claimed a spot here, or the host
+   picked one of my uids, or my name is on the curated list. canJoin gates
+   participating (RSVP, chat, photos, inviting) on Invite Only events;
+   canView gates the whole page when visibility is Invited Guests Only.
+   Friends / Friends-of-guests are discovery settings, not link gates. */
+function isInviteOnly(ev){ return /^invite only$/i.test(ev.inviteType || ''); }
+function amInvited(ev){
+  var m = loadMe();
+  if(myRsvp(ev.id)) return true;
+  if(m.claims[ev.id] || (ev.slug && m.claims[ev.slug])) return true;
+  var uids = myUids();
+  if((ev.invitedUids || []).some(function(u){ return u && uids.indexOf(u) > -1; })) return true;
+  var nm = (m.name || '').toLowerCase();
+  return !!nm && inviteePool(ev).some(function(g){ return (g.name || '').toLowerCase() === nm; });
+}
+function canJoin(ev){ return ev.role === 'hosting' || !isInviteOnly(ev) || amInvited(ev); }
+function canView(ev){ return ev.role === 'hosting' || ev.visibilityMode !== 'invited' || amInvited(ev); }
 /* names already claimed by some OTHER visitor \u2014 from streamed guest rows
    (live) and from every registry profile's claims map (local) */
 function takenNames(ev){
@@ -3739,7 +3878,7 @@ function takenNames(ev){
   return out;
 }
 function claimCard(ev){
-  var taken = takenNames(ev);
+  var taken = takenNames(ev), lock = isInviteOnly(ev);
   /* a claimed name simply is not on the menu any more */
   var rows = claimList(ev).filter(function(g){ return !taken[g.name.toLowerCase()]; })
     .map(function(g){
@@ -3754,15 +3893,45 @@ function claimCard(ev){
     '<h3 id="modal-h">Who are you?</h3>' +
     (ev.inviteMessage ? '<p>\u201C' + h(ev.inviteMessage) + '\u201D</p>' : '') +
     (rows
-      ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name, or type it below.</p>' +
-        '<div class="claim-list">' + rows + '</div><div class="claim-or"><span>or</span></div>'
-      : '<p>Type your name so ' + h(fname(ev.hostName)) + ' knows who\u2019s coming.</p>') +
-    '<div class="addbox">' +
-      '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
-      '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
+      ? '<p>' + h(fname(ev.hostName)) + ' invited these people. Tap your name' +
+        (lock ? '' : ', or type it below') + '.</p>' +
+        '<div class="claim-list">' + rows + '</div>' +
+        (lock ? '' : '<div class="claim-or"><span>or</span></div>')
+      : '<p>' + (lock
+          ? 'This event is invite only \u2014 ask ' + h(fname(ev.hostName)) + ' for an invitation.'
+          : 'Type your name so ' + h(fname(ev.hostName)) + ' knows who\u2019s coming.') + '</p>') +
+    /* invite only means the curated list IS the menu \u2014 no typing your way in */
+    (lock
+      ? (rows ? '<p class="onote center">Don\u2019t see your name? Ask ' +
+                h(fname(ev.hostName)) + ' for an invitation.</p>' : '')
+      : '<div class="addbox">' +
+        '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
+        '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
+      '</div>') +
+  '</div>';
+}
+/* ---- private event: the gate a non-invited visitor sees ----
+   Names are validated against inviteePool without ever listing it, so a
+   stranger with the link learns nothing about who is invited. */
+function renderLocked(ev){
+  return '<div class="wrap narrow">' +
+    '<header class="top">' +
+      '<a class="icon-btn" href="#home" data-back="home" aria-label="Back to events">' + ico('back') + '</a>' +
+      brandMark() + '<div class="sp"></div>' + profBtn() +
+    '</header>' +
+    '<div class="modal-card claim" style="margin:44px auto 0">' +
+      '<div class="modal-ic">' + ico('lock') + '</div>' +
+      '<h3>Private event</h3>' +
+      '<p>Only invited guests can view this event. If you were invited, enter the name your invitation was sent to.</p>' +
+      '<div class="addbox">' +
+        '<input class="inp" id="lock-name" type="text" maxlength="40" placeholder="Your name">' +
+        '<button class="addbtn" type="button" data-unlock>' + ico('arr') + 'Unlock</button>' +
+      '</div>' +
+      '<p class="onote center">Not on the list? Ask ' + h(fname(ev.hostName)) + ' for an invitation.</p>' +
     '</div>' +
   '</div>';
 }
+
 /* ---- the invite sheet: any member adds names, same parsing as create ---- */
 var INVQ = [];   /* people queued in the open sheet: [{name, phone}] */
 function inviteCard(ev){
@@ -3950,6 +4119,7 @@ function eventDock(id){
   function render(){
     closeMenu();
     var r=route(), key=location.hash||'#home';
+    remapRoles();   /* who is looking may have changed — roles are per-viewer */
 
     /* Detail views stream their subcollections; attach on entry, drop on exit. */
     var wants = (r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat') ? r.id : null;
@@ -3969,7 +4139,7 @@ function eventDock(id){
     /* the create form owns its own state, so it opens before events load */
     if(!STORE.ready && r.v!=='create' && r.v!=='profile'){ app.innerHTML=loadingView(); chrome.innerHTML=''; return; }
     /* leaving the edit screen by any route drops the pending changes */
-    if(r.v!=='edit' && EDIT) endEdit();
+    if(r.v!=='edit' && EDIT){ editCleanup(false); endEdit(); }
     if(r.v==='edit' && (!EDIT || EDIT.id!==r.id) && !startEdit(r.id)){
       toast('That event is no longer here','err'); r={v:'home'};
       history.replaceState({d:0},'','#home');
@@ -3979,7 +4149,11 @@ function eventDock(id){
 
     closeLb();
     if(curKeyChanged || !modal.querySelector('.claim')) closeModal();
-    if(r.v==='home'){      app.innerHTML=renderHome(homeTab,homeQ,homeSearch); chrome.innerHTML=bottomNav('home'); }
+    /* a private event shows its gate instead of any detail view */
+    var dEv=(r.v==='event'||r.v==='guests'||r.v==='photos'||r.v==='chat') ? findEvent(r.id) : null,
+        locked=!!(dEv && !canView(dEv));
+    if(locked){           app.innerHTML=renderLocked(dEv); chrome.innerHTML=''; }
+    else if(r.v==='home'){ app.innerHTML=renderHome(homeTab,homeQ,homeSearch); chrome.innerHTML=bottomNav('home'); }
     else if(r.v==='calendar'){ app.innerHTML=renderCalendar();  chrome.innerHTML=bottomNav('calendar'); }
     else if(r.v==='event'){    app.innerHTML=renderEvent(r.id); chrome.innerHTML=eventDock(r.id); }
     else if(r.v==='chat'){     var stick=curKeyChanged || app.scrollHeight-app.scrollTop-app.clientHeight<80;
@@ -3988,14 +4162,15 @@ function eventDock(id){
     else if(r.v==='photos'){   app.innerHTML=renderPhotos(r.id);chrome.innerHTML=''; }
     else if(r.v==='debug'){    app.innerHTML=renderDebug();     chrome.innerHTML=bottomNav(''); }
     else if(r.v==='profile'){  app.innerHTML=renderProfile();  chrome.innerHTML=bottomNav('profile'); }
-    else if(r.v==='edit'){     app.innerHTML=renderCreate3();  chrome.innerHTML=editFoot(); }
+    else if(r.v==='edit'){     app.innerHTML=renderEditPage(); chrome.innerHTML=editFoot(); }
     else if(r.v==='create'){   app.innerHTML=r.step===4?renderCreate4()
                                               :r.step===3?renderCreate3()
                                               :r.step===2?renderCreate2():renderCreate1();
                                chrome.innerHTML=createFoot(r.step); }
     else {                     app.innerHTML=renderGuests(r.id);chrome.innerHTML=''; }
 
-    document.body.className = (r.v==='event') ? 'has-dock'
+    document.body.className = locked ? ''
+                            : (r.v==='event') ? 'has-dock'
                             : (r.v==='create'||r.v==='edit') ? 'has-cbar'
                             : (r.v==='guests'||r.v==='photos'||r.v==='chat') ? '' : 'has-nav';
     if(!modal.hidden) document.body.classList.add('modal-open');   /* survives the reset */
@@ -4011,7 +4186,7 @@ function eventDock(id){
           if(cFoc){ cInp2.focus(); try{ cInp2.setSelectionRange(cAt,cAt); }catch(e){} } }
       }
     }
-    if(r.v==='event') maybeClaim(r.id);
+    if(r.v==='event' && !locked) maybeClaim(r.id);
 
     curKey=key;
     var restore = curKeyChanged ? (scrolls[key]!=null ? scrolls[key] : 0) : app.scrollTop;
@@ -4076,13 +4251,19 @@ function eventDock(id){
 
     var addp=t.closest('[data-addphoto]');
     if(addp){
+      var aev=findEvent(addp.dataset.addphoto);
+      if(aev && !canJoin(aev)){ toast('Only invited guests can add photos.','err',4000); return; }
       if(window.D2C && D2C.pickPhoto) D2C.pickPhoto(addp.dataset.addphoto);
       else toast('Connect Firebase to add photos.','err');
       return;
     }
 
     var invb=t.closest('[data-invite]');
-    if(invb){ openInvite(invb.dataset.invite); return; }
+    if(invb){
+      var iev=findEvent(invb.dataset.invite);
+      if(iev && !canJoin(iev)){ toast('Only invited guests can invite friends.','err',4000); return; }
+      openInvite(invb.dataset.invite); return;
+    }
     if(t.closest('[data-inv-add]')){ commitInvite(true); return; }
     var invx=t.closest('[data-inv-x]');
     if(invx){ INVQ.splice(+invx.dataset.invX,1); repaintInvite(); return; }
@@ -4244,6 +4425,17 @@ function eventDock(id){
     }
     var clm=t.closest('[data-claim]');
     if(clm){ doClaim(clm.dataset.claim, false); return; }
+    if(t.closest('[data-unlock]')){
+      var li=document.getElementById('lock-name'), lv=li&&li.value.trim();
+      if(!lv){ toast('Type your name first','err'); return; }
+      var lev=findEvent(route().id); if(!lev) return;
+      var hit=inviteePool(lev).filter(function(g){
+        return (g.name||'').toLowerCase()===lv.toLowerCase(); })[0];
+      if(!hit){ toast('That name isn’t on the guest list.','err',4000); return; }
+      doClaim(hit.name, false);        /* taken-name check happens inside */
+      render();
+      return;
+    }
     if(t.closest('[data-claim-go]')){
       var cin=document.getElementById('claim-name'), cv=cin&&cin.value.trim();
       if(!cv){ toast('Type your name first','err'); return; }
@@ -4472,6 +4664,10 @@ function eventDock(id){
     if(e.key==='Enter' && e.target.id==='msg-in'){ e.preventDefault(); sendMsg(e.target.dataset.event); }
     if(e.key==='Enter' && e.target.id==='c-add'){ e.preventDefault(); commitAdd(true); }
     if(e.key==='Enter' && e.target.id==='inv-add'){ e.preventDefault(); commitInvite(true); }
+    if(e.key==='Enter' && e.target.id==='lock-name'){
+      e.preventDefault();
+      var ub=document.querySelector('[data-unlock]'); if(ub) ub.click();
+    }
     /* spans/divs with role="button" don't click from the keyboard on their own */
     if((e.key==='Enter'||e.key===' ') && !/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)){
       var rb=e.target.closest && e.target.closest('[role="button"]');
@@ -4949,6 +5145,8 @@ function eventDock(id){
     requestAnimationFrame(function(){ jump(app.scrollHeight); });
   }
   function sendMsg(id){
+    var mev=findEvent(id);
+    if(mev && !canJoin(mev)){ toast('Only invited guests can chat on this event.','err',4000); return; }
     var input=document.getElementById('msg-in');
     if(!input) return;
     var text=input.value.trim(); if(!text) return;
@@ -4965,6 +5163,8 @@ function eventDock(id){
   }
   /* a picture message: picked from the OS, uploaded to the chat prefix */
   function sendImg(id){
+    var mev=findEvent(id);
+    if(mev && !canJoin(mev)){ toast('Only invited guests can chat on this event.','err',4000); return; }
     var input=document.getElementById('photo-input');
     input.value='';
     input.onchange=function(){
@@ -5063,6 +5263,10 @@ function eventDock(id){
               document.body.classList.add('modal-open'); }
       return;
     }
+    if(ev && !canJoin(ev)){
+      toast('This event is invite only — ask '+fname(ev.hostName)+' for an invitation.','err',4500);
+      return;
+    }
     var prev=myRsvp(id)||'';
     var n={going:+box.dataset.going, maybe:+box.dataset.maybe, cant:+box.dataset.cant};
     if(cur) n[cur.dataset.k]--;
@@ -5078,7 +5282,19 @@ function eventDock(id){
     m.rsvp[id]=k;
     if(m.events.indexOf(id)<0) m.events.push(id);
     saveMe();
-    if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant};
+    if(ev) ev.counts={going:n.going, maybe:n.maybe, cant:n.cant,
+                      pending:(ev.counts&&ev.counts.pending)||0};
+    /* first answer: my curated invite row is absorbed by my response (live
+       mode also deletes the pending doc — see absorbPending in the module) */
+    if(!prev && ev && ev.waiting){
+      var an=(m.claims[id]||m.name||'').toLowerCase(), aw=ev.waiting.length;
+      if(an){
+        ev.waiting=ev.waiting.filter(function(g){
+          return g.uid || (g.name||'').toLowerCase()!==an; });
+        var cut=aw-ev.waiting.length;
+        if(cut) ev.counts.pending=Math.max(0,(ev.counts.pending||0)-cut);
+      }
+    }
     var pslot=document.getElementById('plus-slot');
     if(pslot && ev) pslot.innerHTML=plusRowInner(ev);
     if(STORE.mode==='live' && window.D2C && D2C.setRsvp){
@@ -5133,6 +5349,7 @@ function eventDock(id){
 
   /* ---------- editing ---------- */
   function leaveEdit(){
+    editCleanup(false);                /* an abandoned new cover upload dies */
     endEdit();
     var id=route().id;
     history.replaceState({d:0},'', id?'#event/'+id:'#home');
@@ -5140,9 +5357,12 @@ function eventDock(id){
   }
   function commitEdit(btn){
     if(!EDIT) return;
-    var id=EDIT.id, patch=settingsPatch(EDIT.draft), old=btn.innerHTML;
+    var d=EDIT.draft, er=draftErrors(d);
+    if(er){ toast(er[0],'err'); var bad=document.getElementById(er[1]); if(bad) bad.focus(); return; }
+    var id=EDIT.id, patch=mergeInto(basicsPatch(d), settingsPatch(d)), old=btn.innerHTML;
     btn.disabled=true; btn.innerHTML='<span class="spin"></span>Saving\u2026';
     function done(){
+      editCleanup(true);               /* replaced cover files die on save */
       endEdit(); toast('Changes saved');
       history.replaceState({d:0},'','#event/'+id); render();
     }
@@ -5156,6 +5376,7 @@ function eventDock(id){
       var ev=STORE.byId[id];
       if(!ev) return fail(new Error('That event is no longer here'));
       for(var k in patch) ev[k]=patch[k];
+      STORE.setEvents(STORE.events);   /* a moved date re-sorts the lists */
       appendLocalActivity(id, 'pen', 'updated the event details');
       done();
     }
@@ -5504,6 +5725,18 @@ async function seed(){
     for(const g of ev.waiting)
       await put(doc(evRef, "guests", PERSON[g.id].fsId), {
         personUid: PERSON[g.id].fsId, eventUid: ev.fsId, status: "pending",
+        name: pn(g.id), avatarUrl: pav(g.id),
+        message: "", invitedLabel: g.when, isHost: false, isYou: false
+      });
+    for(const g of (ev.maybesL || []))
+      await put(doc(evRef, "guests", PERSON[g.id].fsId), {
+        personUid: PERSON[g.id].fsId, eventUid: ev.fsId, status: "maybe",
+        name: pn(g.id), avatarUrl: pav(g.id),
+        message: "", invitedLabel: g.when, isHost: false, isYou: false
+      });
+    for(const g of (ev.cantsL || []))
+      await put(doc(evRef, "guests", PERSON[g.id].fsId), {
+        personUid: PERSON[g.id].fsId, eventUid: ev.fsId, status: "cant",
         name: pn(g.id), avatarUrl: pav(g.id),
         message: "", invitedLabel: g.when, isHost: false, isYou: false
       });
@@ -5941,8 +6174,26 @@ async function setRsvp(eventId, status, prev){
   inc["counts." + status] = fs.increment(1);
   if(prev && prev !== status) inc["counts." + prev] = fs.increment(-1);
   await fs.updateDoc(evRef, inc);
+  /* a first answer absorbs the curated invite row that carried this name */
+  if(!prev){
+    const nm = (window.loadMe && (loadMe().claims[eventId] || loadMe().name)) || "";
+    if(nm) absorbPending(eventId, nm, me.fsId || "anon").catch(() => {});
+  }
   const act = RSVP_ACT[status];
   if(act) logActivity(eventId, act[0], act[1], act[2]);
+}
+
+/* The host-typed pending doc and the visitor's own uid-keyed response are the
+   same person once the name is claimed — the response wins, the curated row
+   (uid-less, so never someone's live doc) goes, and the counter follows. */
+async function absorbPending(eventId, name, keepId){
+  const { db, fs } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  const snap = await fs.getDocs(fs.query(fs.collection(evRef, "guests"),
+    fs.where("status", "==", "pending"), fs.where("name", "==", name)));
+  const dead = snap.docs.filter(d => d.id !== keepId && !d.data().uid);
+  await Promise.all(dead.map(d => fs.deleteDoc(d.ref)));
+  if(dead.length) await fs.updateDoc(evRef, { "counts.pending": fs.increment(-dead.length) });
 }
 
 /* ---------------- 6. visitor profiles ---------------- */
