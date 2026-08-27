@@ -946,6 +946,13 @@ button.view-all{display:block;width:100%;text-align:center}
 .claim-or::before,.claim-or::after{content:"";flex:1;height:1px;background:var(--line)}
 .modal-card .addbox .inp{height:54px}
 .modal-card .addbtn{height:54px;padding:0 16px;font-size:14.5px}
+.claim-row.inv:hover{background:none}
+.claim-row.inv span{margin-left:auto}
+.inv-x{flex:none;display:grid;place-items:center;width:34px;height:34px;margin-left:6px;
+  border-radius:50%;color:var(--muted);transition:background .15s,color .15s}
+.inv-x:hover{background:#fee2e2;color:#dc2626}
+.inv-x svg.i{width:16px;height:16px;stroke-width:2.4}
+.modal-cta[disabled]{opacity:.45;filter:grayscale(.4);cursor:not-allowed;box-shadow:none}
 
 /* fixed step footer */
 .cbar-foot{position:fixed;z-index:22;left:0;right:0;bottom:0;border-top:1px solid var(--line);
@@ -2155,7 +2162,22 @@ function guestBuckets(ev){
      Live mode streams my own guests/{uid} doc, so only mark it as me. */
   if(STORE.mode === 'live'){
     ['going','maybe','cant','waiting'].forEach(function(k){
-      b[k].forEach(function(g){ if(g.uid === m.uid || mine(g)) g.isYou = true; });
+      var seen = {};
+      b[k] = b[k].filter(function(g){
+        /* per-viewer — never trust a stored isYou flag */
+        g.isYou = (!!g.uid && g.uid === m.uid) ||
+                  (!!myName && g.name.toLowerCase() === myName.toLowerCase());
+        var key = g.name.toLowerCase(), first = seen[key];
+        if(!first){ seen[key] = g; return true; }
+        /* the same person twice (the host's created row + their own
+           uid-keyed rsvp/plus doc) folds into one row */
+        if(g.isHost) first.isHost = true;
+        if(g.isYou) first.isYou = true;
+        if(g.plus) first.plus = g.plus;
+        if(!first.avatarUrl) first.avatarUrl = g.avatarUrl;
+        if(!first.message) first.message = g.message;
+        return false;
+      });
     });
   } else if(myName && ev.role !== 'hosting'){
     ['going','maybe','cant','waiting'].forEach(function(k){
@@ -2177,6 +2199,10 @@ function guestBuckets(ev){
     responded[g.name.toLowerCase()] = 1;
   });
   b.waiting = b.waiting.filter(function(g){ return !responded[g.name.toLowerCase()]; });
+  /* my own +1 renders even before (or without) the cloud write landing */
+  ['going','maybe','cant'].forEach(function(k){
+    b[k].forEach(function(g){ if(g.isYou && !g.plus) g.plus = myPlus(ev.id); });
+  });
   return b;
 }
 function renderGuests(id){
@@ -2242,7 +2268,7 @@ function renderGuests(id){
     '<div class="prog" role="img" aria-label="'+responses+' of '+invites+' invitations answered">'+
       '<i style="width:'+pct+'%"></i></div>'+
     '<p>'+invites+' invitations &nbsp;\u00B7&nbsp; '+responses+' responses</p></div>'+
-    '<button class="cta" type="button">'+ico('user-plus')+'Invite More Friends</button>'+
+    '<button class="cta" type="button" data-invite="'+ev.id+'">'+ico('user-plus')+'Invite More Friends</button>'+
     lists+
     '<section class="slink"><div class="slink-top"><div><h2>Share Event Link</h2>'+
       '<p>Anyone with the link can request an invitation.</p></div>'+
@@ -2455,16 +2481,17 @@ function resumeEventDraft(id){
 }
 
 function blankDraft(){
-  var tomorrow = addDays(TODAY, 1);
+  /* the real clock, not the mock TODAY — one week out, 7pm */
+  var start = addDays(isoOf(new Date()), 7);
   return { draftId:'', title:'', coverUrl:'', coverPath:'',
-           date:tomorrow, time:'7:00 PM', endTime:null,
+           date:start, time:'7:00 PM', endTime:null,
            venue:'', address:'', about:'', vibes:[], vibeMore:false,
            /* step 3 */
            capMode:'custom', capacity:30,
            invite:'Invite Only',
            plusMode:'one', plusN:2,
            /* same day as the event until the host sets it themselves */
-           rsvpMode:'custom', rsvpBy:tomorrow, rsvpTouched:false,
+           rsvpMode:'custom', rsvpBy:start, rsvpTouched:false,
            entryMode:'free', entryNote:'',
            visibility:'friends',
            reminders:[1440], remN:2, remUnit:'Hours', notifyChanges:true,
@@ -2487,6 +2514,12 @@ function loadDraft(){
   if(!Array.isArray(DRAFT.extra)) DRAFT.extra = [];
   /* a contact icon is an object URL — dead after a reload, so fall back */
   DRAFT.extra.forEach(function(e){ if(/^blob:/.test(e.photo || '')) e.photo = ''; });
+  /* an old saved draft keeps its fields but never a past date */
+  var today = isoOf(new Date());
+  if(DRAFT.date < today){
+    DRAFT.date = addDays(today, 7);
+    if(!DRAFT.rsvpTouched) DRAFT.rsvpBy = DRAFT.date;
+  }
   return DRAFT;
 }
 function saveDraft(){
@@ -3558,7 +3591,8 @@ function plusMaxOf(ev){
   return m ? +m[1] : 0;
 }
 function plusRowInner(ev){
-  var my = myRsvp(ev.id);
+  /* the host never RSVPs — they are going by definition */
+  var my = myRsvp(ev.id) || (ev.role === 'hosting' ? 'going' : '');
   if(my !== 'going' && my !== 'maybe') return '';
   var max = plusMaxOf(ev);
   if(!max) return '';
@@ -3574,11 +3608,20 @@ function isPublicEvent(ev){
   return ev.visibilityMode === 'public' || /public/i.test(ev.visibility || '') ||
          ev.inviteType === 'Public Link';
 }
-/* the host's curated list \u2014 who they typed in / picked on step 4 */
+/* the host's curated list plus anyone added from the invite sheet later \u2014
+   the identities a visitor can claim */
 function claimList(ev){
-  var l = (ev.invitedGuests && ev.invitedGuests.length) ? ev.invitedGuests
-        : (ev.guestPreview || []).filter(function(g){ return !g.isHost; });
-  return l.slice(0, 12);
+  var seen = {}, out = [];
+  var push = function(g){
+    var k = (g.name || '').toLowerCase();
+    if(!k || seen[k]) return;
+    seen[k] = 1; out.push(g);
+  };
+  ((ev.invitedGuests && ev.invitedGuests.length) ? ev.invitedGuests
+    : (ev.guestPreview || []).filter(function(g){ return !g.isHost; })).forEach(push);
+  /* pending rows with no visitor uid are typed-in people, whoever added them */
+  (ev.waiting || []).forEach(function(g){ if(!g.uid) push(g); });
+  return out.slice(0, 12);
 }
 /* names already claimed by some OTHER visitor \u2014 from streamed guest rows
    (live) and from every registry profile's claims map (local) */
@@ -3619,6 +3662,31 @@ function claimCard(ev){
       '<input class="inp" id="claim-name" type="text" maxlength="40" placeholder="Your name">' +
       '<button class="addbtn" type="button" data-claim-go>' + ico('arr') + 'That\u2019s me</button>' +
     '</div>' +
+  '</div>';
+}
+/* ---- the invite sheet: any member adds names, same parsing as create ---- */
+var INVQ = [];   /* people queued in the open sheet: [{name, phone}] */
+function inviteCard(ev){
+  var rows = INVQ.map(function(p, i){
+    return '<div class="claim-row inv"><img src="' + GAV + '" alt="">' +
+      '<b>' + h(p.name) + '</b><span>' + h(p.phone || '') + '</span>' +
+      '<button class="inv-x" type="button" data-inv-x="' + i + '" aria-label="Remove ' +
+        h(p.name) + '">' + ico('x2') + '</button></div>';
+  }).join('');
+  return '<div class="modal-card claim" data-invitefor="' + h(ev.id) + '">' +
+    '<button class="modal-x" type="button" data-modal-close aria-label="Close">' + ico('x') + '</button>' +
+    '<div class="modal-ic">' + ico('user-plus') + '</div>' +
+    '<h3 id="modal-h">Invite friends</h3>' +
+    '<p>Add a name \u2014 with a phone number too, like <b>Sam Ruiz 555-0123</b>. ' +
+      'They\u2019ll find their name waiting when they open the event link.</p>' +
+    (rows ? '<div class="claim-list">' + rows + '</div>' : '') +
+    '<div class="addbox">' +
+      '<input class="inp" id="inv-add" type="text" maxlength="60" placeholder="Name and phone">' +
+      '<button class="addbtn" type="button" data-inv-add>' + ico('plus') + 'Add</button>' +
+    '</div>' +
+    '<button class="modal-cta go" type="button" data-inv-send' + (INVQ.length ? '' : ' disabled') + '>' +
+      (INVQ.length ? 'Send Invite' + (INVQ.length === 1 ? '' : 's') + ' (' + INVQ.length + ')'
+                   : 'Send Invites') + '</button>' +
   '</div>';
 }
 function nameCard(){
@@ -3748,7 +3816,7 @@ function bottomNav(active){
 }
 function eventDock(id){
   return '<nav class="dock" aria-label="Event actions">'+
-    '<a href="#">'+ico('user-plus')+'<span>Invite Friends</span></a>'+
+    '<button type="button" data-invite="'+id+'">'+ico('user-plus')+'<span>Invite Friends</span></button>'+
     '<a href="#chat/'+id+'" data-nav>'+ico('chat')+'<span>Event Chat</span></a>'+
     '<button type="button" data-share-kind="event" data-share-id="'+id+'">'+
       ico('net')+'<span>Share Event</span></button></nav>';
@@ -3904,6 +3972,13 @@ function eventDock(id){
       else toast('Connect Firebase to add photos.','err');
       return;
     }
+
+    var invb=t.closest('[data-invite]');
+    if(invb){ openInvite(invb.dataset.invite); return; }
+    if(t.closest('[data-inv-add]')){ commitInvite(true); return; }
+    var invx=t.closest('[data-inv-x]');
+    if(invx){ INVQ.splice(+invx.dataset.invX,1); repaintInvite(); return; }
+    if(t.closest('[data-inv-send]')){ sendInvites(); return; }
 
     if(t.closest('[data-cback]')){
       var r0=route();
@@ -4270,6 +4345,7 @@ function eventDock(id){
   document.addEventListener('keydown',function(e){
     if(e.key==='Enter' && e.target.id==='msg-in'){ e.preventDefault(); sendMsg(e.target.dataset.event); }
     if(e.key==='Enter' && e.target.id==='c-add'){ e.preventDefault(); commitAdd(true); }
+    if(e.key==='Enter' && e.target.id==='inv-add'){ e.preventDefault(); commitInvite(true); }
   });
 
   document.addEventListener('input',function(e){
@@ -4298,6 +4374,10 @@ function eventDock(id){
     }
     if(e.target.id==='c-add'){
       if(e.target.value.indexOf(',')>-1) commitAdd(false);
+      return;
+    }
+    if(e.target.id==='inv-add'){
+      if(e.target.value.indexOf(',')>-1) commitInvite(false);
       return;
     }
     if(e.target.id==='q-invite'){
@@ -4478,6 +4558,77 @@ function eventDock(id){
     modal.innerHTML=claimCard(ev); modal.hidden=false;
     document.body.classList.add('modal-open');
   }
+  /* ---------- invite sheet ---------- */
+  function openInvite(id){
+    var ev=findEvent(id); if(!ev) return;
+    INVQ=[];
+    modal.innerHTML=inviteCard(ev); modal.hidden=false;
+    document.body.classList.add('modal-open');
+    var i=document.getElementById('inv-add'); if(i) i.focus();
+  }
+  function repaintInvite(){
+    var sheet=modal.querySelector('[data-invitefor]'); if(!sheet) return;
+    var ev=findEvent(sheet.dataset.invitefor); if(!ev) return;
+    var inp=document.getElementById('inv-add'),
+        v=inp?inp.value:'', foc=document.activeElement===inp;
+    modal.innerHTML=inviteCard(ev);
+    var inp2=document.getElementById('inv-add');
+    if(inp2){ inp2.value=v; if(foc) inp2.focus(); }
+  }
+  /* same quick-add contract as create step 4: Enter or a typed comma commits,
+     "Sam Ruiz 555-0123" splits into name + phone */
+  function commitInvite(all){
+    var box=document.getElementById('inv-add');
+    if(!box) return;
+    var text=box.value;
+    if(!all){
+      var cut=text.lastIndexOf(',');
+      if(cut<0) return;
+      text=text.slice(0,cut);
+      box.value=box.value.slice(cut+1).replace(/^\s+/,'');
+    } else box.value='';
+    var sheet=modal.querySelector('[data-invitefor]'),
+        ev=sheet?findEvent(sheet.dataset.invitefor):null,
+        have={};
+    if(ev) [].concat(ev.guests||[],ev.maybes||[],ev.cants||[],ev.waiting||[],ev.guestPreview||[])
+      .forEach(function(g){ if(g.name) have[g.name.toLowerCase()]=1; });
+    INVQ.forEach(function(p){ have[p.name.toLowerCase()]=1; });
+    var added=0, dup=0;
+    text.split(',').forEach(function(part){
+      var p=parseEntry(part);
+      if(!p) return;
+      if(have[p.name.toLowerCase()]){ dup++; return; }
+      have[p.name.toLowerCase()]=1; INVQ.push(p); added++;
+    });
+    if(added) repaintInvite();
+    else if(dup) toast('Already on the list','err');
+    var again=document.getElementById('inv-add');
+    if(again) again.focus();
+  }
+  function sendInvites(){
+    commitInvite(true);                       /* whatever is still typed counts */
+    var sheet=modal.querySelector('[data-invitefor]');
+    if(!sheet || !INVQ.length) return;
+    var id=sheet.dataset.invitefor, ev=findEvent(id), list=INVQ.slice();
+    INVQ=[];
+    closeModal();
+    if(STORE.mode==='live' && window.D2C && D2C.inviteGuests){
+      toast('Sending invites…','wait',0);
+      D2C.inviteGuests(id, list)
+        .then(function(){ toast(list.length===1?'Invite sent':list.length+' invites sent'); })
+        .catch(function(e){ toast(e.message||'Could not send invites','err'); });
+    } else if(ev){
+      ev.waiting=(ev.waiting||[]).concat(list.map(function(p){
+        return { name:p.name, avatarUrl:GAV, phone:p.phone||'', message:'',
+                 invitedLabel:'Invited just now', isHost:false, isYou:false,
+                 status:'pending', uid:'', source:'invite', plus:0 };
+      }));
+      ev.counts.pending=(ev.counts.pending||0)+list.length;
+      STORE.notify();
+      toast(list.length===1?'Invite added':list.length+' invites added');
+    }
+  }
+
   function doClaim(name, custom){
     var id=route().id, m=loadMe(), ev=findEvent(id);
     if(ev && takenNames(ev)[name.toLowerCase()]){
@@ -4490,7 +4641,8 @@ function eventDock(id){
       claimList(ev).forEach(function(g){
         if(g.name===name){
           if(g.phone && !m.phone) m.phone=g.phone;
-          if(g.avatarUrl && !m.photo) m.photo=g.avatarUrl;
+          /* never adopt the generic placeholder as a real photo */
+          if(g.avatarUrl && g.avatarUrl!==GAV && !m.photo) m.photo=g.avatarUrl;
         }
       });
     }
@@ -5451,8 +5603,30 @@ async function renameLinked(profiles, name, photo){
 async function setPlus(eventId, n){
   const { db, fs } = await initFirebase();
   const me = meIdent();
+  const patch = { uid: me.fsId || "", name: me.name, avatarUrl: me.av, plus: n };
+  /* the host never RSVPs, so their first +1 write must stand alone as a
+     complete going row — a bare {plus} doc is invisible to the status split */
+  if(!(window.myRsvp && myRsvp(eventId)))
+    Object.assign(patch, { status: "going", isHost: true, message: "",
+                           invitedLabel: "Hosting", order: Date.now(), source: "plus" });
   await fs.setDoc(fs.doc(db, ...FS_ROOT, "events", eventId, "guests", me.fsId || "anon"),
-    { plus: n }, { merge: true });
+    patch, { merge: true });
+}
+
+/* ---------------- any member invites more people ----------------
+   Each name becomes a pending guest doc with no visitor uid — exactly the
+   shape the claim sheet reads, so the invitee finds their name waiting. */
+async function inviteGuests(eventId, list){
+  const { db, fs } = await initFirebase();
+  const evRef = fs.doc(db, ...FS_ROOT, "events", eventId);
+  await Promise.all(list.map((g, i) =>
+    fs.setDoc(fs.doc(fs.collection(evRef, "guests")), {
+      uid: "", name: g.name, avatarUrl: GAV, phone: g.phone || "", message: "",
+      invitedLabel: "Just now", isHost: false, isYou: false, status: "pending",
+      order: Date.now() + i, source: "invite"
+    })));
+  await fs.updateDoc(evRef, { "counts.pending": fs.increment(list.length) });
+  ok(list.length + " invite(s) written to " + FS_ROOT.join("/") + "/events/" + eventId + "/guests");
 }
 
 /* ---------------- a named viewer joins the waiting list ---------------- */
@@ -5579,7 +5753,7 @@ function mapGuest(g){
   return { name: g.name || "Guest", avatarUrl: g.avatarUrl || "", message: g.message || "",
            invitedLabel: g.invitedLabel || "", isHost: !!g.isHost, isYou: !!g.isYou,
            status: g.status || "going", uid: g.uid || "", source: g.source || "",
-           plus: g.plus || 0 };
+           phone: g.phone || "", plus: g.plus || 0 };
 }
 
 function stopDetail(){ unsubDetail.forEach(u => { try{ u(); }catch(e){} }); unsubDetail = []; }
@@ -5624,7 +5798,7 @@ async function sendImage(eventId, file){
 }
 
 window.D2C = {
-  pickPhoto, sendMessage, sendImage, uploadCover, createEvent, updateEvent, deleteEvent,
+  pickPhoto, sendMessage, sendImage, inviteGuests, uploadCover, createEvent, updateEvent, deleteEvent,
   saveProfile, findByPhone, setRsvp, setPlus, propagateProfile, announceGuest, renameLinked,
   watchEvent(id){ watchingId = id; stopDetail(); watchDetail(id); },
   unwatchEvent(){ watchingId = null; stopDetail(); },
